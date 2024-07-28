@@ -1,53 +1,52 @@
-use crate::ast::Expr;
+use crate::{
+    ast::Expr,
+    tokenize::{Token, Tokenizer},
+};
 
 pub struct Parser {
-    input: String,
-    pos: usize,
+    tokens: Vec<Token>,
 }
 
 impl Parser {
     pub fn new(input: &str) -> Self {
         Self {
-            input: input.to_owned(),
-            pos: 0,
+            tokens: Tokenizer::new(input)
+                .tokenize()
+                .iter()
+                .rev()
+                .cloned()
+                .collect(),
         }
     }
 
-    fn consume(&mut self, ops: Vec<char>) -> Option<char> {
-        if let Some(ch) = self.input.chars().nth(self.pos) {
-            if !ops.contains(&ch) {
-                None
+    fn consume(&mut self, token: Token) -> bool {
+        if let Some(t) = self.tokens.last() {
+            if *t == token {
+                let _ = self.tokens.pop();
+                true
             } else {
-                self.pos += 1;
-                Some(ch)
+                false
             }
         } else {
-            None
+            false
         }
     }
 
-    fn expect(&mut self, op: char) {
-        if let Some(ch) = self.input.chars().nth(self.pos) {
-            if ch == op {
-                self.pos += 1;
-            } else {
-                panic!("unexpected char!")
+    fn expect(&mut self, token: Token) {
+        if let Some(t) = self.tokens.pop() {
+            if t != token {
+                panic!();
             }
         } else {
-            panic!("exceeded strlen!")
+            panic!();
         }
     }
 
-    fn expect_numchar(&mut self) -> Option<char> {
-        if let Some(ch) = self.input.chars().nth(self.pos) {
-            if ch.is_digit(10) {
-                self.pos += 1;
-                return Some(ch);
-            } else {
-                return None;
-            }
+    fn expect_int(&mut self) -> i64 {
+        if let Some(Token::Int(val)) = self.tokens.pop() {
+            return val;
         } else {
-            return None;
+            panic!();
         }
     }
 
@@ -56,57 +55,44 @@ impl Parser {
     }
 
     fn parse_primary(&mut self) -> Expr {
-        if let Some(_) = self.consume(vec!['(']) {
+        if self.consume(Token::LParen) {
             let exp = self.parse_expr();
-            self.expect(')');
+            self.expect(Token::RParen);
             exp
         } else {
-            self.parse_int()
+            let num = self.expect_int();
+            Expr::int(num)
         }
     }
 
     fn parse_expr(&mut self) -> Expr {
         let mut ret = self.parse_mul();
-        while let Some(op) = self.consume(vec!['+', '-']) {
-            let exp = self.parse_mul();
-            match op {
-                '+' => {
-                    ret = Expr::plus(ret, exp);
-                }
-                '-' => {
-                    ret = Expr::minus(ret, exp);
-                }
-                _ => unreachable!(),
+        loop {
+            if self.consume(Token::Plus) {
+                let exp = self.parse_mul();
+                ret = Expr::plus(ret, exp);
+            } else if self.consume(Token::Minus) {
+                let exp = self.parse_mul();
+                ret = Expr::minus(ret, exp);
+            } else {
+                return ret;
             }
         }
-        ret
     }
 
     fn parse_mul(&mut self) -> Expr {
         let mut ret = self.parse_primary();
-        while let Some(op) = self.consume(vec!['*', '/']) {
-            let exp = self.parse_primary();
-            match op {
-                '*' => {
-                    ret = Expr::mult(ret, exp);
-                }
-                '/' => {
-                    ret = Expr::div(ret, exp);
-                }
-                _ => unreachable!(),
+        loop {
+            if self.consume(Token::Star) {
+                let exp = self.parse_primary();
+                ret = Expr::mult(ret, exp);
+            } else if self.consume(Token::Div) {
+                let exp = self.parse_primary();
+                ret = Expr::div(ret, exp);
+            } else {
+                return ret;
             }
         }
-        ret
-    }
-
-    fn parse_int(&mut self) -> Expr {
-        let mut numstr = String::new();
-        while let Some(numch) = self.expect_numchar() {
-            numstr.push(numch);
-        }
-
-        let num: i64 = numstr.parse().unwrap();
-        Expr::int(num)
     }
 }
 
