@@ -15,14 +15,14 @@ impl Parser {
 
     fn consume(&mut self, op: char) -> bool {
         if let Some(ch) = self.input.chars().nth(self.pos) {
-            if ch == op {
+            if ch != op {
                 return false;
             } else {
                 self.pos += 1;
                 return true;
             }
         } else {
-            panic!("exceeded strlen!")
+            false
         }
     }
 
@@ -55,8 +55,23 @@ impl Parser {
         self.parse_expr()
     }
 
+    fn parse_primary(&mut self) -> Expr {
+        if self.consume('(') {
+            let exp = self.parse_expr();
+            self.expect(')');
+            exp
+        } else {
+            self.parse_int()
+        }
+    }
+
     fn parse_expr(&mut self) -> Expr {
-        self.parse_int()
+        let mut ret = self.parse_primary();
+        while self.consume('+') {
+            let exp = self.parse_primary();
+            ret = Expr::plus(ret, exp);
+        }
+        ret
     }
 
     fn parse_int(&mut self) -> Expr {
@@ -66,7 +81,7 @@ impl Parser {
         }
 
         let num: u64 = numstr.parse().unwrap();
-        Expr::Int(num)
+        Expr::int(num)
     }
 }
 
