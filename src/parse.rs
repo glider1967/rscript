@@ -66,15 +66,32 @@ impl Parser {
     }
 
     fn parse_expr(&mut self) -> Expr {
-        let mut ret = self.parse_primary();
+        let mut ret = self.parse_mul();
         while let Some(op) = self.consume(vec!['+', '-']) {
-            let exp = self.parse_primary();
+            let exp = self.parse_mul();
             match op {
                 '+' => {
                     ret = Expr::plus(ret, exp);
                 }
                 '-' => {
                     ret = Expr::minus(ret, exp);
+                }
+                _ => unreachable!(),
+            }
+        }
+        ret
+    }
+
+    fn parse_mul(&mut self) -> Expr {
+        let mut ret = self.parse_primary();
+        while let Some(op) = self.consume(vec!['*', '/']) {
+            let exp = self.parse_primary();
+            match op {
+                '*' => {
+                    ret = Expr::mult(ret, exp);
+                }
+                '/' => {
+                    ret = Expr::div(ret, exp);
                 }
                 _ => unreachable!(),
             }

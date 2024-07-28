@@ -20,7 +20,15 @@ impl Expr {
         Expr::BinMinus(Box::new(exp1), Box::new(exp2))
     }
 
-    fn to_string(&self) -> String {
+    pub fn mult(exp1: Expr, exp2: Expr) -> Self {
+        Expr::BinMult(Box::new(exp1), Box::new(exp2))
+    }
+
+    pub fn div(exp1: Expr, exp2: Expr) -> Self {
+        Expr::BinDiv(Box::new(exp1), Box::new(exp2))
+    }
+
+    pub fn to_string(&self) -> String {
         match self {
             Expr::Int(v) => format!("Int({})", v),
             Expr::BinPlus(exp1, exp2) => format!("({} + {})", exp1.to_string(), exp2.to_string()),
