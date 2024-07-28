@@ -13,16 +13,16 @@ impl Parser {
         }
     }
 
-    fn consume(&mut self, op: char) -> bool {
+    fn consume(&mut self, ops: Vec<char>) -> Option<char> {
         if let Some(ch) = self.input.chars().nth(self.pos) {
-            if ch != op {
-                return false;
+            if !ops.contains(&ch) {
+                None
             } else {
                 self.pos += 1;
-                return true;
+                Some(ch)
             }
         } else {
-            false
+            None
         }
     }
 
@@ -56,7 +56,7 @@ impl Parser {
     }
 
     fn parse_primary(&mut self) -> Expr {
-        if self.consume('(') {
+        if let Some(_) = self.consume(vec!['(']) {
             let exp = self.parse_expr();
             self.expect(')');
             exp
@@ -67,9 +67,17 @@ impl Parser {
 
     fn parse_expr(&mut self) -> Expr {
         let mut ret = self.parse_primary();
-        while self.consume('+') {
+        while let Some(op) = self.consume(vec!['+', '-']) {
             let exp = self.parse_primary();
-            ret = Expr::plus(ret, exp);
+            match op {
+                '+' => {
+                    ret = Expr::plus(ret, exp);
+                }
+                '-' => {
+                    ret = Expr::minus(ret, exp);
+                }
+                _ => unreachable!(),
+            }
         }
         ret
     }
@@ -80,7 +88,7 @@ impl Parser {
             numstr.push(numch);
         }
 
-        let num: u64 = numstr.parse().unwrap();
+        let num: i64 = numstr.parse().unwrap();
         Expr::int(num)
     }
 }
