@@ -53,7 +53,7 @@ impl Parser {
     }
 
     fn consume_bool(&mut self) -> Option<bool> {
-        if let Some(Token::Str(val)) = self.tokens.last() {
+        if let Some(Token::Keyword(val)) = self.tokens.last() {
             if *val == "true" {
                 let _ = self.tokens.pop();
                 Some(true)

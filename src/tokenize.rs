@@ -2,14 +2,14 @@
 pub enum Token {
     Int(i64),
     Punct(String),
-    Str(String),
+    Keyword(String),
+    Ident(String),
 }
 
 pub struct Tokenizer {
     input: String,
 }
 
-static PARENS: &'static str = "(){}[]";
 impl Tokenizer {
     pub fn new(input: &str) -> Self {
         Self {
@@ -18,6 +18,9 @@ impl Tokenizer {
     }
 
     pub fn tokenize(&self) -> Vec<Token> {
+        let parens: &str = "(){}[]";
+        let keywords: Vec<&str> = vec!["true", "false", "if"];
+
         let mut ret = vec![];
         let mut program = self.input.chars().peekable();
         while let Some(ch) = program.next() {
@@ -43,7 +46,7 @@ impl Tokenizer {
             if ch.is_ascii_punctuation() {
                 let mut signs = ch.to_string();
 
-                if PARENS.contains(ch) {
+                if parens.contains(ch) {
                     ret.push(Token::Punct(signs));
                     continue;
                 }
@@ -70,7 +73,12 @@ impl Tokenizer {
                         break;
                     }
                 }
-                ret.push(Token::Str(ident));
+
+                if keywords.contains(&ident.as_str()) {
+                    ret.push(Token::Keyword(ident))
+                } else {
+                    ret.push(Token::Ident(ident));
+                }
                 continue;
             }
         }
