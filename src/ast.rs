@@ -53,6 +53,10 @@ impl Expr {
         Expr::Int(num)
     }
 
+    pub fn boolean(b: bool) -> Self {
+        Expr::Bool(b)
+    }
+
     pub fn to_string(&self) -> String {
         match self {
             Expr::Int(v) => format!("Int({})", v),

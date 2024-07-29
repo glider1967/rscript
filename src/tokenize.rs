@@ -2,7 +2,7 @@
 pub enum Token {
     Int(i64),
     Punct(String),
-    Indent(String),
+    Str(String),
 }
 
 pub struct Tokenizer {
@@ -63,7 +63,7 @@ impl Tokenizer {
                         break;
                     }
                 }
-                ret.push(Token::Indent(ident));
+                ret.push(Token::Str(ident));
                 continue;
             }
         }

@@ -1,7 +1,11 @@
-expr := ("!")? equ
+expr := or
+or := and ("||" and)*
+and := equ ("&&" equ)*
 equ := rel ("==" rel | "!=" rel)*
 rel := add ("<" add | ">" add | ">=" add | "<=" add)*
 add := mul ('+' mul | '-' mul)*
 mul := unary ('*' unary | '/' unary)*
-unary := ("-")? primary
-primary := int | '(' expr ')'
+unary := ("-" | "!")? primary
+primary := int | bool | ident | '(' expr ')'
+
+bool := "true" | "false"

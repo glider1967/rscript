@@ -42,16 +42,34 @@ impl Parser {
         }
     }
 
-    fn expect_int(&mut self) -> i64 {
-        if let Some(Token::Int(val)) = self.tokens.pop() {
-            return val;
+    fn consume_int(&mut self) -> Option<i64> {
+        if let Some(Token::Int(val)) = self.tokens.last() {
+            let r = Some(*val);
+            let _ = self.tokens.pop();
+            r
         } else {
-            panic!();
+            None
+        }
+    }
+
+    fn consume_bool(&mut self) -> Option<bool> {
+        if let Some(Token::Str(val)) = self.tokens.last() {
+            if *val == "true" {
+                let _ = self.tokens.pop();
+                Some(true)
+            } else if *val == "false" {
+                let _ = self.tokens.pop();
+                Some(false)
+            } else {
+                None
+            }
+        } else {
+            None
         }
     }
 
     pub fn parse(&mut self) -> Expr {
-        self.equ()
+        self.or()
     }
 
     fn primary(&mut self) -> Expr {
@@ -60,8 +78,39 @@ impl Parser {
             self.expect(Token::Punct(")".to_owned()));
             exp
         } else {
-            let num = self.expect_int();
-            Expr::int(num)
+            if let Some(num) = self.consume_int() {
+                Expr::int(num)
+            } else {
+                if let Some(b) = self.consume_bool() {
+                    Expr::boolean(b)
+                } else {
+                    panic!()
+                }
+            }
+        }
+    }
+
+    fn or(&mut self) -> Expr {
+        let mut ret = self.and();
+        loop {
+            if self.consume(Token::Punct("||".to_string())) {
+                let exp = self.or();
+                ret = Expr::bin_or(ret, exp);
+            } else {
+                return ret;
+            }
+        }
+    }
+
+    fn and(&mut self) -> Expr {
+        let mut ret = self.equ();
+        loop {
+            if self.consume(Token::Punct("&&".to_string())) {
+                let exp = self.equ();
+                ret = Expr::bin_and(ret, exp);
+            } else {
+                return ret;
+            }
         }
     }
 
@@ -170,11 +219,12 @@ impl Parser {
     }
 
     fn unary(&mut self) -> Expr {
-        let ret = self.primary();
         if self.consume(Token::Punct("-".to_owned())) {
-            Expr::unary_minus(ret)
+            Expr::unary_minus(self.primary())
+        } else if self.consume(Token::Punct("!".to_owned())) {
+            Expr::unary_not(self.primary())
         } else {
-            ret
+            self.primary()
         }
     }
 }
