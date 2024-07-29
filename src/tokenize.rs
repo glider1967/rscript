@@ -62,7 +62,7 @@ impl Tokenizer {
                 '<' => {
                     if let Some(nn) = program.peek() {
                         if *nn == '=' {
-                            ret.push(Token::GreaterEq);
+                            ret.push(Token::LessEq);
                             let _ = program.next();
                         } else {
                             ret.push(Token::LParenA);
@@ -72,7 +72,7 @@ impl Tokenizer {
                 '>' => {
                     if let Some(nn) = program.peek() {
                         if *nn == '=' {
-                            ret.push(Token::LessEq);
+                            ret.push(Token::GreaterEq);
                             let _ = program.next();
                         } else {
                             ret.push(Token::RParenA);

@@ -71,10 +71,10 @@ impl Parser {
         let mut prev;
 
         if self.consume(Token::Eq) {
-            now = self.mul().clone();
+            now = self.rel().clone();
             ret = Expr::bin_eq(ret, now.clone());
         } else if self.consume(Token::NotEq) {
-            now = self.mul().clone();
+            now = self.rel().clone();
             ret = Expr::bin_neq(ret, now.clone());
         } else {
             return ret;
@@ -83,11 +83,11 @@ impl Parser {
         loop {
             if self.consume(Token::Eq) {
                 prev = now;
-                now = self.mul().clone();
+                now = self.rel().clone();
                 ret = Expr::bin_and(ret, Expr::bin_eq(prev.clone(), now.clone()));
             } else if self.consume(Token::NotEq) {
                 prev = now;
-                now = self.mul().clone();
+                now = self.rel().clone();
                 ret = Expr::bin_and(ret, Expr::bin_neq(prev.clone(), now.clone()));
             } else {
                 return ret;
@@ -97,19 +97,42 @@ impl Parser {
 
     fn rel(&mut self) -> Expr {
         let mut ret = self.add();
+        let mut now;
+        let mut prev;
+
+        if self.consume(Token::LParenA) {
+            now = self.add().clone();
+            ret = Expr::bin_lt(ret, now.clone());
+        } else if self.consume(Token::RParenA) {
+            now = self.add().clone();
+            ret = Expr::bin_gt(ret, now.clone());
+        } else if self.consume(Token::LessEq) {
+            now = self.add().clone();
+            ret = Expr::bin_le(ret, now.clone());
+        } else if self.consume(Token::GreaterEq) {
+            now = self.add().clone();
+            ret = Expr::bin_ge(ret, now.clone());
+        } else {
+            return ret;
+        }
+
         loop {
             if self.consume(Token::LParenA) {
-                let exp = self.add();
-                ret = Expr::bin_lt(ret, exp);
+                prev = now;
+                now = self.add().clone();
+                ret = Expr::bin_and(ret, Expr::bin_lt(prev.clone(), now.clone()));
             } else if self.consume(Token::RParenA) {
-                let exp = self.add();
-                ret = Expr::bin_gt(ret, exp);
+                prev = now;
+                now = self.add().clone();
+                ret = Expr::bin_and(ret, Expr::bin_gt(prev.clone(), now.clone()));
             } else if self.consume(Token::LessEq) {
-                let exp = self.add();
-                ret = Expr::bin_le(ret, exp);
+                prev = now;
+                now = self.add().clone();
+                ret = Expr::bin_and(ret, Expr::bin_le(prev.clone(), now.clone()));
             } else if self.consume(Token::GreaterEq) {
-                let exp = self.add();
-                ret = Expr::bin_ge(ret, exp);
+                prev = now;
+                now = self.add().clone();
+                ret = Expr::bin_and(ret, Expr::bin_ge(prev.clone(), now.clone()));
             } else {
                 return ret;
             }
