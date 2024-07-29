@@ -1,20 +1,7 @@
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Token {
     Int(i64),
-    Plus,
-    Minus,
-    Star,
-    Div,
-    LParen,
-    RParen,
-    LParenA,
-    RParenA,
-    Assign,
-    Eq,
-    Not,
-    NotEq,
-    LessEq,
-    GreaterEq,
+    Punct(String),
     Indent(String),
 }
 
@@ -52,54 +39,32 @@ impl Tokenizer {
                 continue;
             }
 
-            match ch {
-                '+' => ret.push(Token::Plus),
-                '-' => ret.push(Token::Minus),
-                '*' => ret.push(Token::Star),
-                '/' => ret.push(Token::Div),
-                '(' => ret.push(Token::LParen),
-                ')' => ret.push(Token::RParen),
-                '<' => {
-                    if let Some(nn) = program.peek() {
-                        if *nn == '=' {
-                            ret.push(Token::LessEq);
-                            let _ = program.next();
-                        } else {
-                            ret.push(Token::LParenA);
-                        }
+            if ch.is_ascii_punctuation() {
+                let mut signs = ch.to_string();
+                while let Some(punctch) = program.peek() {
+                    if punctch.is_ascii_punctuation() {
+                        signs.push(*punctch);
+                        let _ = program.next();
+                    } else {
+                        break;
                     }
                 }
-                '>' => {
-                    if let Some(nn) = program.peek() {
-                        if *nn == '=' {
-                            ret.push(Token::GreaterEq);
-                            let _ = program.next();
-                        } else {
-                            ret.push(Token::RParenA);
-                        }
+                ret.push(Token::Punct(signs));
+                continue;
+            }
+
+            if ch.is_ascii_alphabetic() {
+                let mut ident = ch.to_string();
+                while let Some(identch) = program.peek() {
+                    if identch.is_ascii_alphabetic() {
+                        ident.push(*identch);
+                        let _ = program.next();
+                    } else {
+                        break;
                     }
                 }
-                '=' => {
-                    if let Some(nn) = program.peek() {
-                        if *nn == '=' {
-                            ret.push(Token::Eq);
-                            let _ = program.next();
-                        } else {
-                            ret.push(Token::Assign);
-                        }
-                    }
-                }
-                '!' => {
-                    if let Some(nn) = program.peek() {
-                        if *nn == '=' {
-                            ret.push(Token::NotEq);
-                            let _ = program.next();
-                        } else {
-                            ret.push(Token::Not);
-                        }
-                    }
-                }
-                _ => panic!("unknown token"),
+                ret.push(Token::Indent(ident));
+                continue;
             }
         }
 
