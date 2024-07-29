@@ -9,6 +9,7 @@ pub struct Tokenizer {
     input: String,
 }
 
+static PARENS: &'static str = "(){}[]";
 impl Tokenizer {
     pub fn new(input: &str) -> Self {
         Self {
@@ -41,6 +42,12 @@ impl Tokenizer {
 
             if ch.is_ascii_punctuation() {
                 let mut signs = ch.to_string();
+
+                if PARENS.contains(ch) {
+                    ret.push(Token::Punct(signs));
+                    continue;
+                }
+
                 while let Some(punctch) = program.peek() {
                     if punctch.is_ascii_punctuation() {
                         signs.push(*punctch);
