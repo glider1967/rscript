@@ -51,12 +51,12 @@ impl Parser {
     }
 
     pub fn parse(&mut self) -> Expr {
-        self.parse_expr()
+        self.equ()
     }
 
-    fn parse_primary(&mut self) -> Expr {
+    fn primary(&mut self) -> Expr {
         if self.consume(Token::LParen) {
-            let exp = self.parse_expr();
+            let exp = self.add();
             self.expect(Token::RParen);
             exp
         } else {
@@ -65,33 +65,93 @@ impl Parser {
         }
     }
 
-    fn parse_expr(&mut self) -> Expr {
-        let mut ret = self.parse_mul();
+    fn equ(&mut self) -> Expr {
+        let mut ret = self.rel();
+        let mut now;
+        let mut prev;
+
+        if self.consume(Token::Eq) {
+            now = self.mul().clone();
+            ret = Expr::bin_eq(ret, now.clone());
+        } else if self.consume(Token::NotEq) {
+            now = self.mul().clone();
+            ret = Expr::bin_neq(ret, now.clone());
+        } else {
+            return ret;
+        }
+
         loop {
-            if self.consume(Token::Plus) {
-                let exp = self.parse_mul();
-                ret = Expr::plus(ret, exp);
-            } else if self.consume(Token::Minus) {
-                let exp = self.parse_mul();
-                ret = Expr::minus(ret, exp);
+            if self.consume(Token::Eq) {
+                prev = now;
+                now = self.mul().clone();
+                ret = Expr::bin_and(ret, Expr::bin_eq(prev.clone(), now.clone()));
+            } else if self.consume(Token::NotEq) {
+                prev = now;
+                now = self.mul().clone();
+                ret = Expr::bin_and(ret, Expr::bin_neq(prev.clone(), now.clone()));
             } else {
                 return ret;
             }
         }
     }
 
-    fn parse_mul(&mut self) -> Expr {
-        let mut ret = self.parse_primary();
+    fn rel(&mut self) -> Expr {
+        let mut ret = self.add();
         loop {
-            if self.consume(Token::Star) {
-                let exp = self.parse_primary();
-                ret = Expr::mult(ret, exp);
-            } else if self.consume(Token::Div) {
-                let exp = self.parse_primary();
-                ret = Expr::div(ret, exp);
+            if self.consume(Token::LParenA) {
+                let exp = self.add();
+                ret = Expr::bin_lt(ret, exp);
+            } else if self.consume(Token::RParenA) {
+                let exp = self.add();
+                ret = Expr::bin_gt(ret, exp);
+            } else if self.consume(Token::LessEq) {
+                let exp = self.add();
+                ret = Expr::bin_le(ret, exp);
+            } else if self.consume(Token::GreaterEq) {
+                let exp = self.add();
+                ret = Expr::bin_ge(ret, exp);
             } else {
                 return ret;
             }
+        }
+    }
+
+    fn add(&mut self) -> Expr {
+        let mut ret = self.mul();
+        loop {
+            if self.consume(Token::Plus) {
+                let exp = self.mul();
+                ret = Expr::bin_plus(ret, exp);
+            } else if self.consume(Token::Minus) {
+                let exp = self.mul();
+                ret = Expr::bin_minus(ret, exp);
+            } else {
+                return ret;
+            }
+        }
+    }
+
+    fn mul(&mut self) -> Expr {
+        let mut ret = self.unary();
+        loop {
+            if self.consume(Token::Star) {
+                let exp = self.unary();
+                ret = Expr::bin_mult(ret, exp);
+            } else if self.consume(Token::Div) {
+                let exp = self.unary();
+                ret = Expr::bin_div(ret, exp);
+            } else {
+                return ret;
+            }
+        }
+    }
+
+    fn unary(&mut self) -> Expr {
+        let ret = self.primary();
+        if self.consume(Token::Minus) {
+            Expr::UnaryMinus(Box::new(ret))
+        } else {
+            ret
         }
     }
 }
