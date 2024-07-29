@@ -7,7 +7,7 @@ mod parse;
 mod tokenize;
 
 fn main() {
-    let expr = Parser::new("(1 + (3-1))>=7").parse();
+    let expr = Parser::new("if(1<=2 || (if(true){false}else{1>=2})){1}else{2}").parse();
     dbg!(&expr.to_string());
 
     dbg!(Eval::new().eval(expr));

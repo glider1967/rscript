@@ -69,12 +69,12 @@ impl Parser {
     }
 
     pub fn parse(&mut self) -> Expr {
-        self.or()
+        self.parse_if()
     }
 
     fn primary(&mut self) -> Expr {
         if self.consume(Token::Punct("(".to_owned())) {
-            let exp = self.add();
+            let exp = self.parse();
             self.expect(Token::Punct(")".to_owned()));
             exp
         } else {
@@ -87,6 +87,24 @@ impl Parser {
                     panic!()
                 }
             }
+        }
+    }
+
+    fn parse_if(&mut self) -> Expr {
+        if self.consume(Token::Keyword("if".to_string())) {
+            self.expect(Token::Punct("(".to_string()));
+            let cond = self.or();
+            self.expect(Token::Punct(")".to_string()));
+            self.expect(Token::Punct("{".to_string()));
+            let exp1 = self.or();
+            self.expect(Token::Punct("}".to_string()));
+            self.expect(Token::Keyword("else".to_string()));
+            self.expect(Token::Punct("{".to_string()));
+            let exp2 = self.or();
+            self.expect(Token::Punct("}".to_string()));
+            Expr::if_expr(cond, exp1, exp2)
+        } else {
+            self.or()
         }
     }
 

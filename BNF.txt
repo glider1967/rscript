@@ -1,4 +1,5 @@
-expr := or
+expr := or | if
+if := "if (" or "){" or "} else {" or "}" 
 or := and ("||" and)*
 and := equ ("&&" equ)*
 equ := rel ("==" rel | "!=" rel)*

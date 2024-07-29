@@ -16,6 +16,7 @@ pub enum Expr {
     BinOr(Box<Expr>, Box<Expr>),
     UnaryMinus(Box<Expr>),
     UnaryNot(Box<Expr>),
+    If(Box<Expr>, Box<Expr>, Box<Expr>),
 }
 
 macro_rules! expr_helpers {
@@ -45,7 +46,8 @@ expr_helpers! {
     (BinAnd, bin_and)(left: Expr, right: Expr),
     (BinOr, bin_or)(left: Expr, right: Expr),
     (UnaryMinus, unary_minus)(expr: Expr),
-    (UnaryNot, unary_not)(expr: Expr)
+    (UnaryNot, unary_not)(expr: Expr),
+    (If, if_expr)(cond: Expr, expr: Expr, else_expr: Expr)
 }
 
 impl Expr {
@@ -75,6 +77,12 @@ impl Expr {
             Expr::BinOr(exp1, exp2) => format!("({} || {})", exp1.to_string(), exp2.to_string()),
             Expr::UnaryMinus(exp1) => format!("-{}", exp1.to_string()),
             Expr::UnaryNot(exp1) => format!("!{}", exp1.to_string()),
+            Expr::If(cond, exp1, exp2) => format!(
+                "if ({}) {{ {} }} else {{ {} }}",
+                cond.to_string(),
+                exp1.to_string(),
+                exp2.to_string()
+            ),
         }
     }
 }

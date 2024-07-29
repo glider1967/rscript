@@ -55,6 +55,17 @@ impl Eval {
             }
             Expr::UnaryMinus(exp1) => int_unary_op(Box::new(|x: i64| -x), self.eval(*exp1)),
             Expr::UnaryNot(exp1) => bool_unary_op(Box::new(|x: bool| !x), self.eval(*exp1)),
+            Expr::If(cond, exp1, exp2) => {
+                if let Value::Bool(b) = self.eval(*cond) {
+                    if b {
+                        self.eval(*exp1)
+                    } else {
+                        self.eval(*exp2)
+                    }
+                } else {
+                    panic!("if expression: non-bool condition!");
+                }
+            }
         }
     }
 }
