@@ -5,6 +5,7 @@ use parse::Parser;
 mod ast;
 mod eval;
 mod parse;
+mod statement;
 mod tokenize;
 
 fn main() -> Result<()> {

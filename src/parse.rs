@@ -77,9 +77,9 @@ impl Parser {
     }
 
     fn primary(&mut self) -> Result<Expr> {
-        if self.consume(Token::Punct("(".to_owned())) {
+        if self.consume(Token::Symbol("(".to_owned())) {
             let exp = self.parse();
-            self.expect(Token::Punct(")".to_owned()))?;
+            self.expect(Token::Symbol(")".to_owned()))?;
             exp
         } else {
             if let Some(num) = self.consume_int() {
@@ -96,16 +96,16 @@ impl Parser {
 
     fn parse_if(&mut self) -> Result<Expr> {
         if self.consume(Token::Keyword("if".to_string())) {
-            self.expect(Token::Punct("(".to_string()))?;
+            self.expect(Token::Symbol("(".to_string()))?;
             let cond = self.or()?;
-            self.expect(Token::Punct(")".to_string()))?;
-            self.expect(Token::Punct("{".to_string()))?;
+            self.expect(Token::Symbol(")".to_string()))?;
+            self.expect(Token::Symbol("{".to_string()))?;
             let exp1 = self.or()?;
-            self.expect(Token::Punct("}".to_string()))?;
+            self.expect(Token::Symbol("}".to_string()))?;
             self.expect(Token::Keyword("else".to_string()))?;
-            self.expect(Token::Punct("{".to_string()))?;
+            self.expect(Token::Symbol("{".to_string()))?;
             let exp2 = self.or()?;
-            self.expect(Token::Punct("}".to_string()))?;
+            self.expect(Token::Symbol("}".to_string()))?;
             Ok(Expr::if_expr(cond, exp1, exp2))
         } else {
             self.or()
@@ -115,7 +115,7 @@ impl Parser {
     fn or(&mut self) -> Result<Expr> {
         let mut ret = self.and()?;
         loop {
-            if self.consume(Token::Punct("||".to_string())) {
+            if self.consume(Token::Symbol("||".to_string())) {
                 let exp = self.and()?;
                 ret = Expr::bin_or(ret, exp);
             } else {
@@ -127,7 +127,7 @@ impl Parser {
     fn and(&mut self) -> Result<Expr> {
         let mut ret = self.equ()?;
         loop {
-            if self.consume(Token::Punct("&&".to_string())) {
+            if self.consume(Token::Symbol("&&".to_string())) {
                 let exp = self.equ()?;
                 ret = Expr::bin_and(ret, exp);
             } else {
@@ -141,10 +141,10 @@ impl Parser {
         let mut now;
         let mut prev;
 
-        if self.consume(Token::Punct("==".to_owned())) {
+        if self.consume(Token::Symbol("==".to_owned())) {
             now = self.rel()?.clone();
             ret = Expr::bin_eq(ret, now.clone());
-        } else if self.consume(Token::Punct("!=".to_owned())) {
+        } else if self.consume(Token::Symbol("!=".to_owned())) {
             now = self.rel()?.clone();
             ret = Expr::bin_neq(ret, now.clone());
         } else {
@@ -152,11 +152,11 @@ impl Parser {
         }
 
         loop {
-            if self.consume(Token::Punct("==".to_owned())) {
+            if self.consume(Token::Symbol("==".to_owned())) {
                 prev = now;
                 now = self.rel()?.clone();
                 ret = Expr::bin_and(ret, Expr::bin_eq(prev.clone(), now.clone()));
-            } else if self.consume(Token::Punct("!=".to_owned())) {
+            } else if self.consume(Token::Symbol("!=".to_owned())) {
                 prev = now;
                 now = self.rel()?.clone();
                 ret = Expr::bin_and(ret, Expr::bin_neq(prev.clone(), now.clone()));
@@ -171,16 +171,16 @@ impl Parser {
         let mut now;
         let mut prev;
 
-        if self.consume(Token::Punct("<".to_owned())) {
+        if self.consume(Token::Symbol("<".to_owned())) {
             now = self.add()?.clone();
             ret = Expr::bin_lt(ret, now.clone());
-        } else if self.consume(Token::Punct(">".to_owned())) {
+        } else if self.consume(Token::Symbol(">".to_owned())) {
             now = self.add()?.clone();
             ret = Expr::bin_gt(ret, now.clone());
-        } else if self.consume(Token::Punct("<=".to_owned())) {
+        } else if self.consume(Token::Symbol("<=".to_owned())) {
             now = self.add()?.clone();
             ret = Expr::bin_le(ret, now.clone());
-        } else if self.consume(Token::Punct(">=".to_owned())) {
+        } else if self.consume(Token::Symbol(">=".to_owned())) {
             now = self.add()?.clone();
             ret = Expr::bin_ge(ret, now.clone());
         } else {
@@ -188,19 +188,19 @@ impl Parser {
         }
 
         loop {
-            if self.consume(Token::Punct("<".to_owned())) {
+            if self.consume(Token::Symbol("<".to_owned())) {
                 prev = now;
                 now = self.add()?.clone();
                 ret = Expr::bin_and(ret, Expr::bin_lt(prev.clone(), now.clone()));
-            } else if self.consume(Token::Punct(">".to_owned())) {
+            } else if self.consume(Token::Symbol(">".to_owned())) {
                 prev = now;
                 now = self.add()?.clone();
                 ret = Expr::bin_and(ret, Expr::bin_gt(prev.clone(), now.clone()));
-            } else if self.consume(Token::Punct("<=".to_owned())) {
+            } else if self.consume(Token::Symbol("<=".to_owned())) {
                 prev = now;
                 now = self.add()?.clone();
                 ret = Expr::bin_and(ret, Expr::bin_le(prev.clone(), now.clone()));
-            } else if self.consume(Token::Punct(">=".to_owned())) {
+            } else if self.consume(Token::Symbol(">=".to_owned())) {
                 prev = now;
                 now = self.add()?.clone();
                 ret = Expr::bin_and(ret, Expr::bin_ge(prev.clone(), now.clone()));
@@ -213,10 +213,10 @@ impl Parser {
     fn add(&mut self) -> Result<Expr> {
         let mut ret = self.mul()?;
         loop {
-            if self.consume(Token::Punct("+".to_string())) {
+            if self.consume(Token::Symbol("+".to_string())) {
                 let exp = self.mul()?;
                 ret = Expr::bin_plus(ret, exp);
-            } else if self.consume(Token::Punct("-".to_string())) {
+            } else if self.consume(Token::Symbol("-".to_string())) {
                 let exp = self.mul()?;
                 ret = Expr::bin_minus(ret, exp);
             } else {
@@ -228,10 +228,10 @@ impl Parser {
     fn mul(&mut self) -> Result<Expr> {
         let mut ret = self.unary()?;
         loop {
-            if self.consume(Token::Punct("*".to_owned())) {
+            if self.consume(Token::Symbol("*".to_owned())) {
                 let exp = self.unary()?;
                 ret = Expr::bin_mult(ret, exp);
-            } else if self.consume(Token::Punct("/".to_owned())) {
+            } else if self.consume(Token::Symbol("/".to_owned())) {
                 let exp = self.unary()?;
                 ret = Expr::bin_div(ret, exp);
             } else {
@@ -241,9 +241,9 @@ impl Parser {
     }
 
     fn unary(&mut self) -> Result<Expr> {
-        if self.consume(Token::Punct("-".to_owned())) {
+        if self.consume(Token::Symbol("-".to_owned())) {
             Ok(Expr::unary_minus(self.primary()?))
-        } else if self.consume(Token::Punct("!".to_owned())) {
+        } else if self.consume(Token::Symbol("!".to_owned())) {
             Ok(Expr::unary_not(self.primary()?))
         } else {
             Ok(self.primary()?)

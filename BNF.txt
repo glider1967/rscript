@@ -1,5 +1,9 @@
-expr := or | if
-if := "if (" or "){" or "} else {" or "}" 
+prog := (stmt)* expr
+
+stmt := "let" ident "=" expr ";"
+
+expr := if
+if := or | "if (" or "){" or "} else {" or "}" 
 or := and ("||" and)*
 and := equ ("&&" equ)*
 equ := rel ("==" rel | "!=" rel)*

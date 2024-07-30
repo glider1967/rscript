@@ -1,7 +1,7 @@
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Token {
     Int(i64),
-    Punct(String),
+    Symbol(String),
     Keyword(String),
     Ident(String),
 }
@@ -47,7 +47,7 @@ impl Tokenizer {
                 let mut signs = ch.to_string();
 
                 if parens.contains(ch) {
-                    ret.push(Token::Punct(signs));
+                    ret.push(Token::Symbol(signs));
                     continue;
                 }
 
@@ -59,14 +59,14 @@ impl Tokenizer {
                         break;
                     }
                 }
-                ret.push(Token::Punct(signs));
+                ret.push(Token::Symbol(signs));
                 continue;
             }
 
             if ch.is_ascii_alphabetic() {
                 let mut ident = ch.to_string();
                 while let Some(identch) = program.peek() {
-                    if identch.is_ascii_alphabetic() {
+                    if identch.is_ascii_alphanumeric() {
                         ident.push(*identch);
                         let _ = program.next();
                     } else {
