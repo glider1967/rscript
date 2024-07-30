@@ -2,6 +2,7 @@
 pub enum Expr {
     Int(i64),
     Bool(bool),
+    Ident(String),
     BinPlus(Box<Expr>, Box<Expr>),
     BinMinus(Box<Expr>, Box<Expr>),
     BinMult(Box<Expr>, Box<Expr>),
@@ -59,10 +60,15 @@ impl Expr {
         Expr::Bool(b)
     }
 
+    pub fn ident(name: String) -> Self {
+        Expr::Ident(name)
+    }
+
     pub fn to_string(&self) -> String {
         match self {
             Expr::Int(v) => format!("Int({})", v),
-            Expr::Bool(v) => format!("{}", v),
+            Expr::Bool(v) => v.to_string(),
+            Expr::Ident(name) => name.clone(),
             Expr::BinPlus(exp1, exp2) => format!("({} + {})", exp1.to_string(), exp2.to_string()),
             Expr::BinMinus(exp1, exp2) => format!("({} - {})", exp1.to_string(), exp2.to_string()),
             Expr::BinMult(exp1, exp2) => format!("({} * {})", exp1.to_string(), exp2.to_string()),

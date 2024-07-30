@@ -1,5 +1,6 @@
 use crate::{
-    ast::Expr,
+    expression::Expr,
+    statement::Statement,
     tokenize::{Token, Tokenizer},
 };
 
@@ -72,13 +73,31 @@ impl Parser {
         }
     }
 
-    pub fn parse(&mut self) -> Result<Expr> {
+    fn consume_ident(&mut self) -> Option<String> {
+        if let Some(Token::Ident(val)) = self.tokens.last() {
+            let r = Some(val.clone());
+            let _ = self.tokens.pop();
+            r
+        } else {
+            None
+        }
+    }
+
+    fn expect_ident(&mut self) -> Result<String> {
+        if let Some(Token::Ident(val)) = self.tokens.pop() {
+            Ok(val)
+        } else {
+            bail!("unexpected non-identifier")
+        }
+    }
+
+    fn parse_expr(&mut self) -> Result<Expr> {
         self.parse_if()
     }
 
     fn primary(&mut self) -> Result<Expr> {
         if self.consume(Token::Symbol("(".to_owned())) {
-            let exp = self.parse();
+            let exp = self.parse_expr();
             self.expect(Token::Symbol(")".to_owned()))?;
             exp
         } else {
@@ -88,7 +107,11 @@ impl Parser {
                 if let Some(b) = self.consume_bool() {
                     Ok(Expr::boolean(b))
                 } else {
-                    bail!("unexpected token")
+                    if let Some(name) = self.consume_ident() {
+                        Ok(Expr::ident(name))
+                    } else {
+                        bail!("unexpected token")
+                    }
                 }
             }
         }
@@ -249,17 +272,33 @@ impl Parser {
             Ok(self.primary()?)
         }
     }
+
+    pub fn parse_stmt(&mut self) -> Result<Statement> {
+        if self.consume(Token::Keyword("let".to_owned())) {
+            let ident = self.expect_ident()?;
+            self.expect(Token::Symbol("=".to_owned()))?;
+            let expr = self.parse_expr()?;
+            self.expect(Token::Symbol(";".to_string()))?;
+            Ok(Statement::AssignAndConseq(
+                ident,
+                expr,
+                Box::new(self.parse_stmt()?),
+            ))
+        } else {
+            Ok(Statement::Expression(self.parse_expr()?))
+        }
+    }
 }
 
 #[cfg(test)]
 mod parse {
-    use crate::ast::Expr;
+    use crate::expression::Expr;
 
     use super::Parser;
 
     #[test]
     fn parse_num() {
-        let expr: Expr = Parser::new("233425").parse().unwrap();
+        let expr: Expr = Parser::new("233425").parse_expr().unwrap();
         assert_eq!(expr, Expr::Int(233425));
     }
 }

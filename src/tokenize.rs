@@ -19,7 +19,7 @@ impl Tokenizer {
 
     pub fn tokenize(&self) -> Vec<Token> {
         let parens: &str = "(){}[]";
-        let keywords: Vec<&str> = vec!["true", "false", "if", "else"];
+        let keywords: Vec<&str> = vec!["true", "false", "if", "else", "let"];
 
         let mut ret = vec![];
         let mut program = self.input.chars().peekable();
