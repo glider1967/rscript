@@ -16,7 +16,7 @@ impl Value {
         match self {
             Value::Bool(b) => b.to_string(),
             Value::Int(i) => i.to_string(),
-            Value::Lambda(v, e, env) => format!("lambda ({v})"),
+            Value::Lambda(v, _, _) => format!("lambda ({v})"),
         }
     }
 }
@@ -29,6 +29,12 @@ impl Eval {
     pub fn new() -> Self {
         Self {
             env: Rc::new(RefCell::new(Env::new())),
+        }
+    }
+
+    pub fn with_env(env: Env) -> Self {
+        Self {
+            env: Rc::new(RefCell::new(env)),
         }
     }
 
@@ -129,6 +135,15 @@ impl Eval {
             Expr::Lambda(var, expr) => {
                 let new_env = Env::with_outer(Rc::clone(&self.env));
                 Ok(Value::Lambda(var.clone(), expr.clone(), new_env))
+            }
+            Expr::App(fun, var) => {
+                if let Value::Lambda(arg, expr, env) = self.eval_expr(fun)? {
+                    let inner_eval = Eval::with_env(env);
+                    inner_eval.env.borrow_mut().set(arg, self.eval_expr(var)?);
+                    inner_eval.eval_expr(&expr)
+                } else {
+                    bail!("eval error: application to non-lambda!")
+                }
             }
         }
     }

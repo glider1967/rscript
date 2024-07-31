@@ -272,12 +272,22 @@ impl Parser {
 
     fn unary(&mut self) -> Result<Expr> {
         if self.consume(Token::Symbol("-".to_owned())) {
-            Ok(Expr::unary_minus(self.primary()?))
+            Ok(Expr::unary_minus(self.app()?))
         } else if self.consume(Token::Symbol("!".to_owned())) {
-            Ok(Expr::unary_not(self.primary()?))
+            Ok(Expr::unary_not(self.app()?))
         } else {
-            Ok(self.primary()?)
+            Ok(self.app()?)
         }
+    }
+
+    fn app(&mut self) -> Result<Expr> {
+        let mut ret = self.primary()?;
+        while self.consume(Token::Symbol("(".to_owned())) {
+            let var = self.parse_expr()?;
+            self.expect(Token::Symbol(")".to_owned()))?;
+            ret = Expr::app(ret, var)
+        }
+        Ok(ret)
     }
 
     pub fn prog(&mut self) -> Result<Expr> {

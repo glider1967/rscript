@@ -21,6 +21,7 @@ pub enum Expr {
     If(Box<Expr>, Box<Expr>, Box<Expr>),
     Assign(String, Box<Expr>),
     Lambda(String, Box<Expr>),
+    App(Box<Expr>, Box<Expr>),
 }
 
 macro_rules! expr_helpers {
@@ -51,7 +52,8 @@ expr_helpers! {
     (BinOr, bin_or)(left: Expr, right: Expr),
     (UnaryMinus, unary_minus)(expr: Expr),
     (UnaryNot, unary_not)(expr: Expr),
-    (If, if_expr)(cond: Expr, expr: Expr, else_expr: Expr)
+    (If, if_expr)(cond: Expr, expr: Expr, else_expr: Expr),
+    (App, app)(fun: Expr, arg: Expr)
 }
 
 impl Expr {
@@ -116,7 +118,10 @@ impl Expr {
                 format!("let {ident} = {};", expr.to_string())
             }
             Expr::Lambda(var, _) => {
-                format!("lambda ({}) {{ ... }}", var)
+                format!("<lambda ({})>", var)
+            }
+            Expr::App(fun, var) => {
+                format!("{}({})", fun.to_string(), var.to_string())
             }
         }
     }
