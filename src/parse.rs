@@ -1,6 +1,5 @@
 use crate::{
     expression::Expr,
-    statement::Statement,
     tokenize::{Token, Tokenizer},
 };
 
@@ -273,20 +272,24 @@ impl Parser {
         }
     }
 
-    pub fn parse_stmt(&mut self) -> Result<Statement> {
+    pub fn assign(&mut self) -> Result<Expr> {
         if self.consume(Token::Keyword("let".to_owned())) {
             let ident = self.expect_ident()?;
             self.expect(Token::Symbol("=".to_owned()))?;
             let expr = self.parse_expr()?;
             self.expect(Token::Symbol(";".to_string()))?;
-            Ok(Statement::AssignAndConseq(
-                ident,
-                expr,
-                Box::new(self.parse_stmt()?),
-            ))
+            Ok(Expr::assign(ident, expr))
         } else {
-            Ok(Statement::Expression(self.parse_expr()?))
+            Ok(self.parse_expr()?)
         }
+    }
+
+    pub fn statement(&mut self) -> Result<Vec<Expr>> {
+        let mut ret = vec![];
+        while !self.tokens.is_empty() {
+            ret.push(self.assign()?);
+        }
+        Ok(ret)
     }
 }
 

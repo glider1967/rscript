@@ -18,6 +18,7 @@ pub enum Expr {
     UnaryMinus(Box<Expr>),
     UnaryNot(Box<Expr>),
     If(Box<Expr>, Box<Expr>, Box<Expr>),
+    Assign(String, Box<Expr>),
 }
 
 macro_rules! expr_helpers {
@@ -64,6 +65,10 @@ impl Expr {
         Expr::Ident(name)
     }
 
+    pub fn assign(name: String, expr: Expr) -> Self {
+        Expr::Assign(name, Box::new(expr))
+    }
+
     pub fn to_string(&self) -> String {
         match self {
             Expr::Int(v) => format!("Int({})", v),
@@ -89,6 +94,9 @@ impl Expr {
                 exp1.to_string(),
                 exp2.to_string()
             ),
+            Expr::Assign(ident, expr) => {
+                format!("let {ident} = {};", expr.to_string())
+            }
         }
     }
 }
