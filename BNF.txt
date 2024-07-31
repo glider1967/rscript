@@ -1,16 +1,17 @@
-prog := (stmt)* expr
-
-stmt := "let" ident "=" expr ";"
+prog := (assign)* expr
+assign := "let" ident "=" expr ";"
 
 expr := if
-if := or | "if (" or "){" or "} else {" or "}" 
+if := or | "if (" or ") {" prog "} else {" prog "}" 
 or := and ("||" and)*
 and := equ ("&&" equ)*
 equ := rel ("==" rel | "!=" rel)*
 rel := add ("<" add | ">" add | ">=" add | "<=" add)*
 add := mul ('+' mul | '-' mul)*
 mul := unary ('*' unary | '/' unary)*
-unary := ("-" | "!")? primary
-primary := int | bool | ident | '(' expr ')'
+unary := ("-" | "!")? app
+app := primary ( "(" ident ")" )*
+primary := int | bool | ident | '(' expr ')' | lambda
 
 bool := "true" | "false"
+lambda := "lambda (" ident ") {" prog "}"

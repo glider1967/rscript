@@ -8,6 +8,17 @@ use crate::{environment::Env, expression::Expr};
 pub enum Value {
     Int(i64),
     Bool(bool),
+    Lambda(String, Box<Expr>, Env),
+}
+
+impl Value {
+    pub fn to_string(&self) -> String {
+        match self {
+            Value::Bool(b) => b.to_string(),
+            Value::Int(i) => i.to_string(),
+            Value::Lambda(v, e, env) => format!("lambda ({v})"),
+        }
+    }
 }
 
 pub struct Eval {
@@ -26,6 +37,12 @@ impl Eval {
             Expr::Int(v) => Ok(Value::Int(*v)),
             Expr::Bool(v) => Ok(Value::Bool(*v)),
             Expr::Ident(name) => self.env.borrow().get(name.clone()),
+            Expr::Program(prog, ret) => {
+                for expr in prog {
+                    let _ = self.eval_expr(expr);
+                }
+                self.eval_expr(ret)
+            }
             Expr::BinPlus(exp1, exp2) => Ok(int_bin_op(
                 Box::new(|x, y| x + y),
                 self.eval_expr(exp1)?,
@@ -109,15 +126,11 @@ impl Eval {
                 self.env.borrow_mut().set(name.clone(), val.clone());
                 Ok(val)
             }
+            Expr::Lambda(var, expr) => {
+                let new_env = Env::with_outer(Rc::clone(&self.env));
+                Ok(Value::Lambda(var.clone(), expr.clone(), new_env))
+            }
         }
-    }
-
-    pub fn eval(&mut self, ast_vec: &Vec<Expr>) -> Result<Value> {
-        let mut ret = Value::Bool(false);
-        for ast in ast_vec {
-            ret = self.eval_expr(ast)?;
-        }
-        Ok(ret)
     }
 }
 

@@ -37,7 +37,7 @@ impl Parser {
     fn expect(&mut self, token: Token) -> Result<()> {
         if let Some(t) = self.tokens.pop() {
             if t != token {
-                bail!("unexpected token")
+                bail!("unexpected token: {:?}", t)
             } else {
                 Ok(())
             }
@@ -95,7 +95,15 @@ impl Parser {
     }
 
     fn primary(&mut self) -> Result<Expr> {
-        if self.consume(Token::Symbol("(".to_owned())) {
+        if self.consume(Token::Keyword("lambda".to_owned())) {
+            self.expect(Token::Symbol("(".to_owned()))?;
+            let ident = self.expect_ident()?;
+            self.expect(Token::Symbol(")".to_owned()))?;
+            self.expect(Token::Symbol("{".to_owned()))?;
+            let prog = self.prog()?;
+            self.expect(Token::Symbol("}".to_owned()))?;
+            Ok(Expr::lambda(ident, prog))
+        } else if self.consume(Token::Symbol("(".to_owned())) {
             let exp = self.parse_expr();
             self.expect(Token::Symbol(")".to_owned()))?;
             exp
@@ -109,7 +117,7 @@ impl Parser {
                     if let Some(name) = self.consume_ident() {
                         Ok(Expr::ident(name))
                     } else {
-                        bail!("unexpected token")
+                        bail!("unexpected token: {:?}", self.tokens.last())
                     }
                 }
             }
@@ -272,24 +280,18 @@ impl Parser {
         }
     }
 
-    pub fn assign(&mut self) -> Result<Expr> {
-        if self.consume(Token::Keyword("let".to_owned())) {
+    pub fn prog(&mut self) -> Result<Expr> {
+        let mut prog = vec![];
+        while self.consume(Token::Keyword("let".to_owned())) {
             let ident = self.expect_ident()?;
             self.expect(Token::Symbol("=".to_owned()))?;
             let expr = self.parse_expr()?;
             self.expect(Token::Symbol(";".to_string()))?;
-            Ok(Expr::assign(ident, expr))
-        } else {
-            Ok(self.parse_expr()?)
+            prog.push(Expr::assign(ident, expr));
         }
-    }
 
-    pub fn statement(&mut self) -> Result<Vec<Expr>> {
-        let mut ret = vec![];
-        while !self.tokens.is_empty() {
-            ret.push(self.assign()?);
-        }
-        Ok(ret)
+        let ret = self.parse_expr()?;
+        Ok(Expr::program(prog, ret))
     }
 }
 

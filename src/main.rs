@@ -9,9 +9,9 @@ mod parse;
 mod tokenize;
 
 fn main() -> Result<()> {
-    let stmt = Parser::new("let a = 2; let b = a + 1; a * b").statement()?;
-    dbg!(&stmt.iter().map(|x| x.to_string()).collect::<Vec<_>>());
+    let stmt = Parser::new("let f= lambda (v) {let a = v+1; a}; f(2)").prog()?;
+    dbg!(&stmt.to_string());
 
-    dbg!(Eval::new().eval(&stmt)?);
+    dbg!(Eval::new().eval_expr(&stmt)?.to_string());
     Ok(())
 }

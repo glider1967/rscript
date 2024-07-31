@@ -3,6 +3,7 @@ pub enum Expr {
     Int(i64),
     Bool(bool),
     Ident(String),
+    Program(Vec<Expr>, Box<Expr>),
     BinPlus(Box<Expr>, Box<Expr>),
     BinMinus(Box<Expr>, Box<Expr>),
     BinMult(Box<Expr>, Box<Expr>),
@@ -19,6 +20,7 @@ pub enum Expr {
     UnaryNot(Box<Expr>),
     If(Box<Expr>, Box<Expr>, Box<Expr>),
     Assign(String, Box<Expr>),
+    Lambda(String, Box<Expr>),
 }
 
 macro_rules! expr_helpers {
@@ -69,11 +71,27 @@ impl Expr {
         Expr::Assign(name, Box::new(expr))
     }
 
+    pub fn lambda(name: String, expr: Expr) -> Self {
+        Expr::Lambda(name, Box::new(expr))
+    }
+
+    pub fn program(prog: Vec<Expr>, ret: Expr) -> Self {
+        Expr::Program(prog, Box::new(ret))
+    }
+
     pub fn to_string(&self) -> String {
         match self {
             Expr::Int(v) => format!("Int({})", v),
             Expr::Bool(v) => v.to_string(),
             Expr::Ident(name) => name.clone(),
+            Expr::Program(v, ret) => format!(
+                "{} {}",
+                v.iter()
+                    .map(|x| x.to_string())
+                    .collect::<Vec<_>>()
+                    .join(" "),
+                ret.to_string()
+            ),
             Expr::BinPlus(exp1, exp2) => format!("({} + {})", exp1.to_string(), exp2.to_string()),
             Expr::BinMinus(exp1, exp2) => format!("({} - {})", exp1.to_string(), exp2.to_string()),
             Expr::BinMult(exp1, exp2) => format!("({} * {})", exp1.to_string(), exp2.to_string()),
@@ -96,6 +114,9 @@ impl Expr {
             ),
             Expr::Assign(ident, expr) => {
                 format!("let {ident} = {};", expr.to_string())
+            }
+            Expr::Lambda(var, _) => {
+                format!("lambda ({}) {{ ... }}", var)
             }
         }
     }
