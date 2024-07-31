@@ -90,7 +90,7 @@ impl Parser {
         }
     }
 
-    fn parse_expr(&mut self) -> Result<Expr> {
+    fn expr(&mut self) -> Result<Expr> {
         self.parse_if()
     }
 
@@ -104,7 +104,7 @@ impl Parser {
             self.expect(Token::Symbol("}".to_owned()))?;
             Ok(Expr::lambda(ident, prog))
         } else if self.consume(Token::Symbol("(".to_owned())) {
-            let exp = self.parse_expr();
+            let exp = self.expr();
             self.expect(Token::Symbol(")".to_owned()))?;
             exp
         } else {
@@ -283,7 +283,7 @@ impl Parser {
     fn app(&mut self) -> Result<Expr> {
         let mut ret = self.primary()?;
         while self.consume(Token::Symbol("(".to_owned())) {
-            let var = self.parse_expr()?;
+            let var = self.expr()?;
             self.expect(Token::Symbol(")".to_owned()))?;
             ret = Expr::app(ret, var)
         }
@@ -295,12 +295,12 @@ impl Parser {
         while self.consume(Token::Keyword("let".to_owned())) {
             let ident = self.expect_ident()?;
             self.expect(Token::Symbol("=".to_owned()))?;
-            let expr = self.parse_expr()?;
+            let expr = self.expr()?;
             self.expect(Token::Symbol(";".to_string()))?;
             prog.push(Expr::assign(ident, expr));
         }
 
-        let ret = self.parse_expr()?;
+        let ret = self.expr()?;
         Ok(Expr::program(prog, ret))
     }
 }
@@ -313,7 +313,7 @@ mod parse {
 
     #[test]
     fn parse_num() {
-        let expr: Expr = Parser::new("233425").parse_expr().unwrap();
+        let expr: Expr = Parser::new("233425").expr().unwrap();
         assert_eq!(expr, Expr::Int(233425));
     }
 }

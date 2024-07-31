@@ -38,97 +38,92 @@ impl Eval {
         }
     }
 
-    pub fn eval_expr(&self, ast: &Expr) -> Result<Value> {
+    pub fn eval(&self, ast: &Expr) -> Result<Value> {
         match ast {
             Expr::Int(v) => Ok(Value::Int(*v)),
             Expr::Bool(v) => Ok(Value::Bool(*v)),
             Expr::Ident(name) => self.env.borrow().get(name.clone()),
             Expr::Program(prog, ret) => {
                 for expr in prog {
-                    let _ = self.eval_expr(expr);
+                    let _ = self.eval(expr);
                 }
-                self.eval_expr(ret)
+                self.eval(ret)
             }
             Expr::BinPlus(exp1, exp2) => Ok(int_bin_op(
                 Box::new(|x, y| x + y),
-                self.eval_expr(exp1)?,
-                self.eval_expr(exp2)?,
+                self.eval(exp1)?,
+                self.eval(exp2)?,
             )?),
             Expr::BinMinus(exp1, exp2) => Ok(int_bin_op(
                 Box::new(|x, y| x - y),
-                self.eval_expr(exp1)?,
-                self.eval_expr(exp2)?,
+                self.eval(exp1)?,
+                self.eval(exp2)?,
             )?),
             Expr::BinMult(exp1, exp2) => Ok(int_bin_op(
                 Box::new(|x, y| x * y),
-                self.eval_expr(exp1)?,
-                self.eval_expr(exp2)?,
+                self.eval(exp1)?,
+                self.eval(exp2)?,
             )?),
             Expr::BinDiv(exp1, exp2) => Ok(int_bin_op(
                 Box::new(|x, y| x / y),
-                self.eval_expr(exp1)?,
-                self.eval_expr(exp2)?,
+                self.eval(exp1)?,
+                self.eval(exp2)?,
             )?),
             Expr::BinEq(exp1, exp2) => Ok(int_bin_op_bool(
                 Box::new(|x, y| x == y),
-                self.eval_expr(exp1)?,
-                self.eval_expr(exp2)?,
+                self.eval(exp1)?,
+                self.eval(exp2)?,
             )?),
             Expr::BinNotEq(exp1, exp2) => Ok(int_bin_op_bool(
                 Box::new(|x, y| x != y),
-                self.eval_expr(exp1)?,
-                self.eval_expr(exp2)?,
+                self.eval(exp1)?,
+                self.eval(exp2)?,
             )?),
             Expr::BinLT(exp1, exp2) => Ok(int_bin_op_bool(
                 Box::new(|x, y| x < y),
-                self.eval_expr(exp1)?,
-                self.eval_expr(exp2)?,
+                self.eval(exp1)?,
+                self.eval(exp2)?,
             )?),
             Expr::BinGT(exp1, exp2) => Ok(int_bin_op_bool(
                 Box::new(|x, y| x > y),
-                self.eval_expr(exp1)?,
-                self.eval_expr(exp2)?,
+                self.eval(exp1)?,
+                self.eval(exp2)?,
             )?),
             Expr::BinLE(exp1, exp2) => Ok(int_bin_op_bool(
                 Box::new(|x, y| x <= y),
-                self.eval_expr(exp1)?,
-                self.eval_expr(exp2)?,
+                self.eval(exp1)?,
+                self.eval(exp2)?,
             )?),
             Expr::BinGE(exp1, exp2) => Ok(int_bin_op_bool(
                 Box::new(|x, y| x >= y),
-                self.eval_expr(exp1)?,
-                self.eval_expr(exp2)?,
+                self.eval(exp1)?,
+                self.eval(exp2)?,
             )?),
             Expr::BinAnd(exp1, exp2) => Ok(bool_bin_op(
                 Box::new(|x, y| x && y),
-                self.eval_expr(exp1)?,
-                self.eval_expr(exp2)?,
+                self.eval(exp1)?,
+                self.eval(exp2)?,
             )?),
             Expr::BinOr(exp1, exp2) => Ok(bool_bin_op(
                 Box::new(|x, y| x || y),
-                self.eval_expr(exp1)?,
-                self.eval_expr(exp2)?,
+                self.eval(exp1)?,
+                self.eval(exp2)?,
             )?),
-            Expr::UnaryMinus(exp1) => {
-                Ok(int_unary_op(Box::new(|x: i64| -x), self.eval_expr(exp1)?)?)
-            }
-            Expr::UnaryNot(exp1) => Ok(bool_unary_op(
-                Box::new(|x: bool| !x),
-                self.eval_expr(exp1)?,
-            )?),
+            Expr::UnaryMinus(exp1) => Ok(int_unary_op(Box::new(|x: i64| -x), self.eval(exp1)?)?),
+            Expr::UnaryNot(exp1) => Ok(bool_unary_op(Box::new(|x: bool| !x), self.eval(exp1)?)?),
             Expr::If(cond, exp1, exp2) => {
-                if let Value::Bool(b) = self.eval_expr(cond)? {
+                if let Value::Bool(b) = self.eval(cond)? {
                     if b {
-                        self.eval_expr(exp1)
+                        self.eval(exp1)
                     } else {
-                        self.eval_expr(exp2)
+                        self.eval(exp2)
                     }
                 } else {
                     bail!("if expression: non-bool condition!");
                 }
             }
             Expr::Assign(name, expr) => {
-                let val = self.eval_expr(expr)?;
+                let val = self.eval(expr)?;
                 self.env.borrow_mut().set(name.clone(), val.clone());
                 Ok(val)
             }
@@ -137,10 +132,10 @@ impl Eval {
                 Ok(Value::Lambda(var.clone(), expr.clone(), new_env))
             }
             Expr::App(fun, var) => {
-                if let Value::Lambda(arg, expr, env) = self.eval_expr(fun)? {
+                if let Value::Lambda(arg, expr, env) = self.eval(fun)? {
                     let inner_eval = Eval::with_env(env);
-                    inner_eval.env.borrow_mut().set(arg, self.eval_expr(var)?);
-                    inner_eval.eval_expr(&expr)
+                    inner_eval.env.borrow_mut().set(arg, self.eval(var)?);
+                    inner_eval.eval(&expr)
                 } else {
                     bail!("eval error: application to non-lambda!")
                 }
