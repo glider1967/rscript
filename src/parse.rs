@@ -1,6 +1,7 @@
 use crate::{
     expression::Expr,
     tokenize::{Token, Tokenizer},
+    types::Type,
 };
 
 use anyhow::{bail, Ok, Result};
@@ -98,6 +99,8 @@ impl Parser {
         if self.consume(Token::Keyword("lambda".to_owned())) {
             self.expect(Token::Symbol("(".to_owned()))?;
             let ident = self.expect_ident()?;
+            self.expect(Token::Symbol(":".to_string()))?;
+            let ty = self.parse_ty()?;
             self.expect(Token::Symbol(")".to_owned()))?;
             self.expect(Token::Symbol("{".to_owned()))?;
             let prog = self.prog()?;
@@ -288,6 +291,8 @@ impl Parser {
         let mut prog = vec![];
         while self.consume(Token::Keyword("let".to_owned())) {
             let ident = self.expect_ident()?;
+            self.expect(Token::Symbol(":".to_owned()))?;
+            let ty = self.parse_ty()?;
             self.expect(Token::Symbol("=".to_owned()))?;
             let expr = self.expr()?;
             self.expect(Token::Symbol(";".to_string()))?;
@@ -296,6 +301,38 @@ impl Parser {
 
         let ret = self.expr()?;
         Ok(Expr::program(prog, ret))
+    }
+
+    // =====================================================================
+
+    fn parse_ty(&mut self) -> Result<Type> {
+        self.fntype()
+    }
+
+    fn fntype(&mut self) -> Result<Type> {
+        let mut ret = self.primitive_type()?;
+        loop {
+            if self.consume(Token::Symbol("->".to_string())) {
+                let ty = self.primitive_type()?;
+                ret = Type::func(ret, ty);
+            } else {
+                return Ok(ret);
+            }
+        }
+    }
+
+    fn primitive_type(&mut self) -> Result<Type> {
+        if let Some(Token::Type(val)) = self.tokens.pop() {
+            if &val == "int" {
+                Ok(Type::Int)
+            } else if &val == "bool" {
+                Ok(Type::Bool)
+            } else {
+                bail!("unexpected type: {val}")
+            }
+        } else {
+            bail!("unexpected non-type")
+        }
     }
 }
 

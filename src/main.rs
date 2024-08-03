@@ -9,20 +9,22 @@ mod expression;
 mod internal_value;
 mod parse;
 mod tokenize;
+mod types;
 
 fn main() -> Result<()> {
-    let stmt =
-        Parser::new("let q = 9; let f= lambda (w) {lambda (v) {let a = v*q; a + w}}; f(2)(100)")
-            .prog()?;
+    let stmt = Parser::new(
+        "let q: int = 9; let f : int -> int -> int = lambda (w: int) {lambda (v: int) {let a: int = v*q; a + w}}; f(2)(100)",
+    )
+    .prog()?;
     dbg!(&stmt.to_string());
 
     dbg!(Eval::new().eval(&stmt)?.to_string());
 
-    let stmt =
-        Parser::new("let f= lambda (n) { if(n == 1 || n == 2) {1} else {f(n-1) + f(n-2)} }; f(10)")
-            .prog()?;
-    dbg!(&stmt.to_string());
+    // let stmt =
+    //     Parser::new("let f= lambda (n) { if(n == 1 || n == 2) {1} else {f(n-1) + f(n-2)} }; f(10)")
+    //         .prog()?;
+    // dbg!(&stmt.to_string());
 
-    dbg!(Eval::new().eval(&stmt)?.to_string());
+    // dbg!(Eval::new().eval(&stmt)?.to_string());
     Ok(())
 }

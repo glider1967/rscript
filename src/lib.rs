@@ -8,6 +8,7 @@ mod expression;
 mod internal_value;
 mod parse;
 mod tokenize;
+mod types;
 
 #[wasm_bindgen]
 extern "C" {

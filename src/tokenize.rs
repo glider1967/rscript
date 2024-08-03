@@ -3,6 +3,7 @@ pub enum Token {
     Int(i64),
     Symbol(String),
     Keyword(String),
+    Type(String),
     Ident(String),
 }
 
@@ -20,6 +21,7 @@ impl Tokenizer {
     pub fn tokenize(&self) -> Vec<Token> {
         let parens: &str = "(){}[]";
         let keywords: Vec<&str> = vec!["true", "false", "if", "else", "let", "lambda"];
+        let types: Vec<&str> = vec!["int", "bool"];
 
         let mut ret = vec![];
         let mut program = self.input.chars().peekable();
@@ -76,6 +78,8 @@ impl Tokenizer {
 
                 if keywords.contains(&ident.as_str()) {
                     ret.push(Token::Keyword(ident))
+                } else if types.contains(&ident.as_str()) {
+                    ret.push(Token::Type(ident))
                 } else {
                     ret.push(Token::Ident(ident));
                 }
