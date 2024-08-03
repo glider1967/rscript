@@ -5,6 +5,7 @@ pub enum Type {
     Int,
     Bool,
     Unit,
+    Unknown,
     Func(Box<Type>, Box<Type>),
 }
 
@@ -20,6 +21,7 @@ impl fmt::Display for Type {
             Type::Bool => write!(f, "bool"),
             Type::Int => write!(f, "int"),
             Type::Unit => write!(f, "unit"),
+            Type::Unknown => write!(f, "?"),
             Type::Func(t1, t2) => write!(f, "({t1} -> {t2})"),
         }
     }
@@ -53,17 +55,16 @@ impl TypeEnv {
     pub fn get(&self, name: String) -> Result<Type> {
         if let Some(val) = self.env.get(&name) {
             Ok(val.clone())
+        } else if let Some(outer) = &self.outer {
+            outer.borrow().get(name)
         } else {
-            if let Some(outer) = &self.outer {
-                outer.borrow().get(name)
-            } else {
-                dbg!("{}", &self.env);
-                bail!("type: undefined variable {name}");
-            }
+            dbg!("{}", &self.env);
+            bail!("type: undefined variable {name}");
         }
     }
 
     pub fn set(&mut self, name: String, val: Type) {
+        dbg!(&self.env);
         self.env.insert(name, val);
     }
 }
