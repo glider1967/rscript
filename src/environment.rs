@@ -2,7 +2,7 @@ use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use anyhow::{bail, Ok, Result};
 
-use crate::eval::Value;
+use crate::internal_value::Value;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Env {

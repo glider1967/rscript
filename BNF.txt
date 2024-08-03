@@ -1,5 +1,5 @@
 prog := (assign)* expr
-assign := "let" ident "=" expr ";"
+assign := "let" ident (":" type)? "=" expr ";"
 
 expr := if
 if := or | "if (" or ") {" prog "} else {" prog "}" 
@@ -14,4 +14,10 @@ app := primary ( "(" expr ")" )*
 primary := int | bool | ident | '(' expr ')' | lambda
 
 bool := "true" | "false"
-lambda := "lambda (" ident ") {" prog "}"
+lambda := "lambda (" ident ":" type ") {" prog "}"
+
+========================
+
+type := fntype
+fntype = primary_type ("->" primary_type)*
+primary_type := "int" | "bool" | "(" type ")"

@@ -5,11 +5,12 @@ use wasm_bindgen::prelude::*;
 mod environment;
 mod eval;
 mod expression;
+mod internal_value;
 mod parse;
 mod tokenize;
 
 #[wasm_bindgen]
-extern {
+extern "C" {
     pub fn alert(s: &str);
 }
 
@@ -21,14 +22,10 @@ pub fn greet(name: &str) {
 #[wasm_bindgen]
 pub fn eval_script(line: &str) -> JsValue {
     match Parser::new(line).prog() {
-        Ok(stmt) => {
-            match Eval::new().eval(&stmt) {
-                Ok(val) => val.to_string().into(),
-                Err(err) => err.to_string().into()
-            }
-        }
-        Err(err) => {
-            err.to_string().into()
-        }
+        Ok(stmt) => match Eval::new().eval(&stmt) {
+            Ok(val) => val.to_string().into(),
+            Err(err) => err.to_string().into(),
+        },
+        Err(err) => err.to_string().into(),
     }
 }

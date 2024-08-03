@@ -1,10 +1,12 @@
 use anyhow::{Ok, Result};
+
 use eval::Eval;
 use parse::Parser;
 
 mod environment;
 mod eval;
 mod expression;
+mod internal_value;
 mod parse;
 mod tokenize;
 
