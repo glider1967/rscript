@@ -13,7 +13,7 @@ mod types;
 
 fn main() -> Result<()> {
     let stmt = Parser::new(
-        "let q: int = 9; let f : int -> int -> int = lambda (w: int) {lambda (v: int) {let a: int = v*q; a + w}}; f(2)(100)",
+        "let q: int = 9; let f : int -> int -> int = lambda (w: int) {lambda (v: int) {let a: int = v*q; a + q}}; f(2)(100)",
     )
     .prog()?;
     dbg!(&stmt.expr.to_string());

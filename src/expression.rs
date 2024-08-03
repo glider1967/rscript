@@ -79,10 +79,10 @@ impl Expr {
                     ty: *cod.clone(),
                 }
             } else {
-                panic!("type");
+                panic!("type: expected: ({}) app {}", &fun.ty, &arg.ty);
             }
         } else {
-            panic!("type")
+            panic!("type: {}", &fun.ty)
         }
     }
 

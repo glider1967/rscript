@@ -1,13 +1,16 @@
+use std::{cell::RefCell, rc::Rc};
+
 use crate::{
     expression::Expr,
     tokenize::{Token, Tokenizer},
-    types::Type,
+    types::{Type, TypeEnv},
 };
 
 use anyhow::{bail, Ok, Result};
 
 pub struct Parser {
     tokens: Vec<Token>,
+    type_env: Rc<RefCell<TypeEnv>>,
 }
 
 impl Parser {
@@ -19,6 +22,7 @@ impl Parser {
                 .rev()
                 .cloned()
                 .collect(),
+            type_env: Rc::new(RefCell::new(TypeEnv::new())),
         }
     }
 
@@ -101,11 +105,12 @@ impl Parser {
             let ident = self.expect_ident()?;
             self.expect(Token::Symbol(":".to_string()))?;
             let ty = self.parse_ty()?;
+            self.type_env.borrow_mut().set(ident.clone(), ty.clone());
             self.expect(Token::Symbol(")".to_owned()))?;
             self.expect(Token::Symbol("{".to_owned()))?;
             let prog = self.prog()?;
             self.expect(Token::Symbol("}".to_owned()))?;
-            Ok(Expr::lambda(ident, ty, prog))
+            Ok(Expr::lambda(ident, Type::func(ty, prog.clone().ty), prog))
         } else if self.consume(Token::Symbol("(".to_owned())) {
             let exp = self.expr();
             self.expect(Token::Symbol(")".to_owned()))?;
@@ -115,7 +120,8 @@ impl Parser {
         } else if let Some(b) = self.consume_bool() {
             Ok(Expr::boolean(b))
         } else if let Some(name) = self.consume_ident() {
-            Ok(Expr::ident(name, Type::Unit))
+            let ty = self.type_env.borrow().get(name.clone())?;
+            Ok(Expr::ident(name, ty))
         } else {
             bail!("unexpected token: {:?}", self.tokens.last())
         }
@@ -317,6 +323,7 @@ impl Parser {
             let ident = self.expect_ident()?;
             self.expect(Token::Symbol(":".to_owned()))?;
             let ty = self.parse_ty()?;
+            self.type_env.borrow_mut().set(ident.clone(), ty.clone());
             self.expect(Token::Symbol("=".to_owned()))?;
             let expr = self.expr()?;
             self.expect(Token::Symbol(";".to_string()))?;
@@ -338,7 +345,7 @@ impl Parser {
         loop {
             if self.consume(Token::Symbol("->".to_string())) {
                 let ty = self.primitive_type()?;
-                ret = Type::func(ret, ty);
+                ret = Type::func(ty, ret);
             } else {
                 return Ok(ret);
             }
