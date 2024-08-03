@@ -6,18 +6,7 @@ pub enum Expr {
     Bool(bool),
     Ident(String),
     Program(Vec<Expr>, Box<Expr>),
-    BinPlus(Box<Expr>, Box<Expr>),
-    BinMinus(Box<Expr>, Box<Expr>),
-    BinMult(Box<Expr>, Box<Expr>),
-    BinDiv(Box<Expr>, Box<Expr>),
-    BinEq(Box<Expr>, Box<Expr>),
-    BinNotEq(Box<Expr>, Box<Expr>),
-    BinLT(Box<Expr>, Box<Expr>),
-    BinGT(Box<Expr>, Box<Expr>),
-    BinLE(Box<Expr>, Box<Expr>),
-    BinGE(Box<Expr>, Box<Expr>),
-    BinAnd(Box<Expr>, Box<Expr>),
-    BinOr(Box<Expr>, Box<Expr>),
+    BinOp(String, Box<Expr>, Box<Expr>),
     UnaryMinus(Box<Expr>),
     UnaryNot(Box<Expr>),
     If(Box<Expr>, Box<Expr>, Box<Expr>),
@@ -40,18 +29,6 @@ macro_rules! expr_helpers {
 
 // マクロを使用して関数を生成
 expr_helpers! {
-    (BinPlus, bin_plus)(left: Expr, right: Expr),
-    (BinMinus, bin_minus)(left: Expr, right: Expr),
-    (BinMult, bin_mult)(left: Expr, right: Expr),
-    (BinDiv, bin_div)(left: Expr, right: Expr),
-    (BinEq, bin_eq)(left: Expr, right: Expr),
-    (BinNotEq, bin_neq)(left: Expr, right: Expr),
-    (BinLT, bin_lt)(left: Expr, right: Expr),
-    (BinGT, bin_gt)(left: Expr, right: Expr),
-    (BinLE, bin_le)(left: Expr, right: Expr),
-    (BinGE, bin_ge)(left: Expr, right: Expr),
-    (BinAnd, bin_and)(left: Expr, right: Expr),
-    (BinOr, bin_or)(left: Expr, right: Expr),
     (UnaryMinus, unary_minus)(expr: Expr),
     (UnaryNot, unary_not)(expr: Expr),
     (If, if_expr)(cond: Expr, expr: Expr, else_expr: Expr),
@@ -75,6 +52,10 @@ impl Expr {
         Expr::Assign(name, Box::new(expr))
     }
 
+    pub fn binop(name: String, exp1: Expr, exp2: Expr) -> Self {
+        Expr::BinOp(name, Box::new(exp1), Box::new(exp2))
+    }
+
     pub fn lambda(name: String, expr: Expr) -> Self {
         Expr::Lambda(name, Box::new(expr))
     }
@@ -82,7 +63,6 @@ impl Expr {
     pub fn program(prog: Vec<Expr>, ret: Expr) -> Self {
         Expr::Program(prog, Box::new(ret))
     }
-
 }
 
 impl fmt::Display for Expr {
@@ -91,7 +71,8 @@ impl fmt::Display for Expr {
             Expr::Int(v) => write!(f, "Int({})", v),
             Expr::Bool(v) => write!(f, "{}", v),
             Expr::Ident(name) => write!(f, "{}", name),
-            Expr::Program(v, ret) => write!(f, 
+            Expr::Program(v, ret) => write!(
+                f,
                 "{} {}",
                 v.iter()
                     .map(|x| x.to_string())
@@ -99,26 +80,12 @@ impl fmt::Display for Expr {
                     .join(" "),
                 ret.to_string()
             ),
-            Expr::BinPlus(exp1, exp2) => write!(f, "({} + {})", exp1, exp2),
-            Expr::BinMinus(exp1, exp2) => write!(f, "({} - {})", exp1, exp2),
-            Expr::BinMult(exp1, exp2) => write!(f, "({} * {})", exp1, exp2),
-            Expr::BinDiv(exp1, exp2) => write!(f, "({} / {})", exp1, exp2),
-            Expr::BinEq(exp1, exp2) => write!(f, "({} == {})", exp1, exp2),
-            Expr::BinNotEq(exp1, exp2) => write!(f, "({} != {})", exp1, exp2),
-            Expr::BinLT(exp1, exp2) => write!(f, "({} < {})", exp1, exp2),
-            Expr::BinGT(exp1, exp2) => write!(f, "({} > {})", exp1, exp2),
-            Expr::BinLE(exp1, exp2) => write!(f, "({} <= {})", exp1, exp2),
-            Expr::BinGE(exp1, exp2) => write!(f, "({} >= {})", exp1, exp2),
-            Expr::BinAnd(exp1, exp2) => write!(f, "({} && {})", exp1, exp2),
-            Expr::BinOr(exp1, exp2) => write!(f, "({} || {})", exp1, exp2),
+            Expr::BinOp(op, exp1, exp2) => write!(f, "({exp1} {op} {exp2})"),
             Expr::UnaryMinus(exp1) => write!(f, "-{}", exp1),
             Expr::UnaryNot(exp1) => write!(f, "!{}", exp1),
-            Expr::If(cond, exp1, exp2) => write!(f, 
-                "if ({}) {{ {} }} else {{ {} }}",
-                cond,
-                exp1,
-                exp2
-            ),
+            Expr::If(cond, exp1, exp2) => {
+                write!(f, "if ({}) {{ {} }} else {{ {} }}", cond, exp1, exp2)
+            }
             Expr::Assign(ident, expr) => {
                 write!(f, "let {ident} = {};", expr)
             }

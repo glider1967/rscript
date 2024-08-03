@@ -144,7 +144,7 @@ impl Parser {
         loop {
             if self.consume(Token::Symbol("||".to_string())) {
                 let exp = self.and()?;
-                ret = Expr::bin_or(ret, exp);
+                ret = Expr::binop("||".into(), ret, exp);
             } else {
                 return Ok(ret);
             }
@@ -156,7 +156,7 @@ impl Parser {
         loop {
             if self.consume(Token::Symbol("&&".to_string())) {
                 let exp = self.equ()?;
-                ret = Expr::bin_and(ret, exp);
+                ret = Expr::binop("&&".into(), ret, exp);
             } else {
                 return Ok(ret);
             }
@@ -170,23 +170,31 @@ impl Parser {
 
         if self.consume(Token::Symbol("==".to_owned())) {
             now = self.rel()?.clone();
-            ret = Expr::bin_eq(ret, now.clone());
+            ret = Expr::binop("==".to_owned(), ret, now.clone());
         } else if self.consume(Token::Symbol("!=".to_owned())) {
             now = self.rel()?.clone();
-            ret = Expr::bin_neq(ret, now.clone());
+            ret = Expr::binop("!=".into(), ret, now.clone());
         } else {
             return Ok(ret);
         }
 
         loop {
-            if self.consume(Token::Symbol("==".to_owned())) {
+            if self.consume(Token::Symbol("==".into())) {
                 prev = now;
                 now = self.rel()?.clone();
-                ret = Expr::bin_and(ret, Expr::bin_eq(prev.clone(), now.clone()));
+                ret = Expr::binop(
+                    "==".into(),
+                    ret,
+                    Expr::binop("==".into(), prev.clone(), now.clone()),
+                );
             } else if self.consume(Token::Symbol("!=".to_owned())) {
                 prev = now;
                 now = self.rel()?.clone();
-                ret = Expr::bin_and(ret, Expr::bin_neq(prev.clone(), now.clone()));
+                ret = Expr::binop(
+                    "!=".into(),
+                    ret,
+                    Expr::binop("!=".into(), prev.clone(), now.clone()),
+                );
             } else {
                 return Ok(ret);
             }
@@ -198,39 +206,55 @@ impl Parser {
         let mut now;
         let mut prev;
 
-        if self.consume(Token::Symbol("<".to_owned())) {
+        if self.consume(Token::Symbol("<".into())) {
             now = self.add()?.clone();
-            ret = Expr::bin_lt(ret, now.clone());
-        } else if self.consume(Token::Symbol(">".to_owned())) {
+            ret = Expr::binop("<".into(), ret, now.clone());
+        } else if self.consume(Token::Symbol(">".into())) {
             now = self.add()?.clone();
-            ret = Expr::bin_gt(ret, now.clone());
-        } else if self.consume(Token::Symbol("<=".to_owned())) {
+            ret = Expr::binop(">".into(), ret, now.clone());
+        } else if self.consume(Token::Symbol("<=".into())) {
             now = self.add()?.clone();
-            ret = Expr::bin_le(ret, now.clone());
-        } else if self.consume(Token::Symbol(">=".to_owned())) {
+            ret = Expr::binop("<=".into(), ret, now.clone());
+        } else if self.consume(Token::Symbol(">=".into())) {
             now = self.add()?.clone();
-            ret = Expr::bin_ge(ret, now.clone());
+            ret = Expr::binop(">=".into(), ret, now.clone());
         } else {
             return Ok(ret);
         }
 
         loop {
-            if self.consume(Token::Symbol("<".to_owned())) {
+            if self.consume(Token::Symbol("<".into())) {
                 prev = now;
                 now = self.add()?.clone();
-                ret = Expr::bin_and(ret, Expr::bin_lt(prev.clone(), now.clone()));
-            } else if self.consume(Token::Symbol(">".to_owned())) {
+                ret = Expr::binop(
+                    "<".into(),
+                    ret,
+                    Expr::binop("<".into(), prev.clone(), now.clone()),
+                );
+            } else if self.consume(Token::Symbol(">".into())) {
                 prev = now;
                 now = self.add()?.clone();
-                ret = Expr::bin_and(ret, Expr::bin_gt(prev.clone(), now.clone()));
-            } else if self.consume(Token::Symbol("<=".to_owned())) {
+                ret = Expr::binop(
+                    ">".into(),
+                    ret,
+                    Expr::binop(">".into(), prev.clone(), now.clone()),
+                );
+            } else if self.consume(Token::Symbol("<=".into())) {
                 prev = now;
                 now = self.add()?.clone();
-                ret = Expr::bin_and(ret, Expr::bin_le(prev.clone(), now.clone()));
-            } else if self.consume(Token::Symbol(">=".to_owned())) {
+                ret = Expr::binop(
+                    "<=".into(),
+                    ret,
+                    Expr::binop("<=".into(), prev.clone(), now.clone()),
+                );
+            } else if self.consume(Token::Symbol(">=".into())) {
                 prev = now;
                 now = self.add()?.clone();
-                ret = Expr::bin_and(ret, Expr::bin_ge(prev.clone(), now.clone()));
+                ret = Expr::binop(
+                    ">=".into(),
+                    ret,
+                    Expr::binop(">=".into(), prev.clone(), now.clone()),
+                );
             } else {
                 return Ok(ret);
             }
@@ -242,10 +266,10 @@ impl Parser {
         loop {
             if self.consume(Token::Symbol("+".to_string())) {
                 let exp = self.mul()?;
-                ret = Expr::bin_plus(ret, exp);
+                ret = Expr::binop("+".to_owned(), ret, exp);
             } else if self.consume(Token::Symbol("-".to_string())) {
                 let exp = self.mul()?;
-                ret = Expr::bin_minus(ret, exp);
+                ret = Expr::binop("-".to_owned(), ret, exp);
             } else {
                 return Ok(ret);
             }
@@ -257,10 +281,10 @@ impl Parser {
         loop {
             if self.consume(Token::Symbol("*".to_owned())) {
                 let exp = self.unary()?;
-                ret = Expr::bin_mult(ret, exp);
+                ret = Expr::binop("*".to_owned(), ret, exp);
             } else if self.consume(Token::Symbol("/".to_owned())) {
                 let exp = self.unary()?;
-                ret = Expr::bin_div(ret, exp);
+                ret = Expr::binop("/".to_owned(), ret, exp);
             } else {
                 return Ok(ret);
             }
