@@ -4,6 +4,7 @@ use core::fmt;
 pub enum Type {
     Int,
     Bool,
+    Unit,
     Func(Box<Type>, Box<Type>),
 }
 
@@ -18,6 +19,7 @@ impl fmt::Display for Type {
         match self {
             Type::Bool => write!(f, "bool"),
             Type::Int => write!(f, "int"),
+            Type::Unit => write!(f, "unit"),
             Type::Func(t1, t2) => write!(f, "({t1} -> {t2})"),
         }
     }

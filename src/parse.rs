@@ -105,7 +105,7 @@ impl Parser {
             self.expect(Token::Symbol("{".to_owned()))?;
             let prog = self.prog()?;
             self.expect(Token::Symbol("}".to_owned()))?;
-            Ok(Expr::lambda(ident, prog))
+            Ok(Expr::lambda(ident, ty, prog))
         } else if self.consume(Token::Symbol("(".to_owned())) {
             let exp = self.expr();
             self.expect(Token::Symbol(")".to_owned()))?;
@@ -115,7 +115,7 @@ impl Parser {
         } else if let Some(b) = self.consume_bool() {
             Ok(Expr::boolean(b))
         } else if let Some(name) = self.consume_ident() {
-            Ok(Expr::ident(name))
+            Ok(Expr::ident(name, Type::Unit))
         } else {
             bail!("unexpected token: {:?}", self.tokens.last())
         }
@@ -293,9 +293,9 @@ impl Parser {
 
     fn unary(&mut self) -> Result<Expr> {
         if self.consume(Token::Symbol("-".to_owned())) {
-            Ok(Expr::unary_minus(self.app()?))
+            Ok(Expr::unaryop("-".into(), self.app()?))
         } else if self.consume(Token::Symbol("!".to_owned())) {
-            Ok(Expr::unary_not(self.app()?))
+            Ok(Expr::unaryop("!".into(), self.app()?))
         } else {
             Ok(self.app()?)
         }
@@ -369,6 +369,12 @@ mod parse {
     #[test]
     fn parse_num() {
         let expr: Expr = Parser::new("233425").expr().unwrap();
-        assert_eq!(expr, Expr::Int(233425));
+        assert_eq!(
+            expr,
+            Expr {
+                expr: crate::expression::InnerExpr::Int(233425),
+                ty: crate::types::Type::Int
+            }
+        );
     }
 }

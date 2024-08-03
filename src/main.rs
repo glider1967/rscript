@@ -16,7 +16,7 @@ fn main() -> Result<()> {
         "let q: int = 9; let f : int -> int -> int = lambda (w: int) {lambda (v: int) {let a: int = v*q; a + w}}; f(2)(100)",
     )
     .prog()?;
-    dbg!(&stmt.to_string());
+    dbg!(&stmt.expr.to_string());
 
     dbg!(Eval::new().eval(&stmt)?.to_string());
 
@@ -24,7 +24,7 @@ fn main() -> Result<()> {
         "let f: int -> int = lambda (n: int) { if(n == 1 || n == 2) {1} else {f(n-1) + f(n-2)} }; f(10)",
     )
     .prog()?;
-    dbg!(&stmt.to_string());
+    dbg!(&stmt.expr.to_string());
 
     dbg!(Eval::new().eval(&stmt)?.to_string());
     Ok(())
