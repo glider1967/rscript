@@ -1,16 +1,13 @@
-use std::{cell::RefCell, rc::Rc};
-
 use crate::{
     expression::Expr,
     tokenize::{Token, Tokenizer},
-    types::{Type, TypeEnv},
+    types::Type,
 };
 
 use anyhow::{bail, Ok, Result};
 
 pub struct Parser {
     tokens: Vec<Token>,
-    type_env: Rc<RefCell<TypeEnv>>,
 }
 
 impl Parser {
@@ -22,7 +19,6 @@ impl Parser {
                 .rev()
                 .cloned()
                 .collect(),
-            type_env: Rc::new(RefCell::new(TypeEnv::new())),
         }
     }
 
@@ -103,14 +99,13 @@ impl Parser {
         if self.consume(Token::Keyword("lambda".to_owned())) {
             self.expect(Token::Symbol("(".to_owned()))?;
             let ident = self.expect_ident()?;
-            self.expect(Token::Symbol(":".to_string()))?;
+            self.expect(Token::Symbol(":".to_owned()))?;
             let ty = self.parse_ty()?;
-            self.type_env.borrow_mut().set(ident.clone(), ty.clone());
             self.expect(Token::Symbol(")".to_owned()))?;
             self.expect(Token::Symbol("{".to_owned()))?;
             let prog = self.prog()?;
             self.expect(Token::Symbol("}".to_owned()))?;
-            Ok(Expr::lambda(ident, Type::func(ty, prog.clone().ty), prog))
+            Ok(Expr::lambda(ident, ty, prog))
         } else if self.consume(Token::Symbol("(".to_owned())) {
             let exp = self.expr();
             self.expect(Token::Symbol(")".to_owned()))?;
@@ -120,8 +115,7 @@ impl Parser {
         } else if let Some(b) = self.consume_bool() {
             Ok(Expr::boolean(b))
         } else if let Some(name) = self.consume_ident() {
-            let ty = self.type_env.borrow().get(name.clone())?;
-            Ok(Expr::ident(name, ty))
+            Ok(Expr::ident(name))
         } else {
             bail!("unexpected token: {:?}", self.tokens.last())
         }
@@ -323,11 +317,10 @@ impl Parser {
             let ident = self.expect_ident()?;
             self.expect(Token::Symbol(":".to_owned()))?;
             let ty = self.parse_ty()?;
-            self.type_env.borrow_mut().set(ident.clone(), ty.clone());
             self.expect(Token::Symbol("=".to_owned()))?;
             let expr = self.expr()?;
             self.expect(Token::Symbol(";".to_string()))?;
-            prog.push(Expr::assign(ident, expr));
+            prog.push(Expr::assign(ident, ty, expr));
         }
 
         let ret = self.expr()?;
@@ -380,7 +373,6 @@ mod parse {
             expr,
             Expr {
                 expr: crate::expression::InnerExpr::Int(233425),
-                ty: crate::types::Type::Int
             }
         );
     }

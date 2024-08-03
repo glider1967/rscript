@@ -90,12 +90,12 @@ impl Eval {
                     bail!("if expression: non-bool condition!");
                 }
             }
-            InnerExpr::Assign(name, expr) => {
+            InnerExpr::Assign(name, _, expr) => {
                 let val = self.eval(&expr)?;
                 self.env.borrow_mut().set(name.clone(), val.clone());
                 Ok(val)
             }
-            InnerExpr::Lambda(var, expr) => {
+            InnerExpr::Lambda(var, _, expr) => {
                 let new_env = Env::with_outer(Rc::clone(&self.env));
                 Ok(Value::Lambda(var.clone(), expr.clone(), new_env))
             }

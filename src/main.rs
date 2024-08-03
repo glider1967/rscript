@@ -1,7 +1,8 @@
-use anyhow::{Ok, Result};
+use anyhow::{Context, Ok, Result};
 
 use eval::Eval;
 use parse::Parser;
+use types::TypeInfer;
 
 mod environment;
 mod eval;
@@ -14,22 +15,25 @@ mod types;
 fn main() -> Result<()> {
     let stmt = Parser::new(
         r#"
-        let q: bool = false;
-        let f : int -> int -> int = lambda (w: int) {
-            let q: int = 7;
+        let f: int -> int -> int = lambda (w: int) {
             lambda (v: int) {
-                let a: int = v*q;
-                a + q
+                let a: int = w*100;
+                a + v
             }
         };
-        let y: int = f(2)(100);
-        q
+        f(2)(7)
         "#,
     )
-    .prog()?;
+    .prog()
+    .context("Parse Error")?;
     dbg!(&stmt.expr.to_string());
 
-    dbg!(Eval::new().eval(&stmt)?.to_string());
+    dbg!(TypeInfer::new().infer_type(&stmt)?);
+
+    dbg!(Eval::new()
+        .eval(&stmt)
+        .context("Evaluation Error")?
+        .to_string());
 
     let stmt = Parser::new(
         r#"
@@ -41,6 +45,7 @@ fn main() -> Result<()> {
     )
     .prog()?;
     dbg!(&stmt.expr.to_string());
+    // dbg!(TypeInfer::new().infer_type(&stmt)?);
 
     dbg!(Eval::new().eval(&stmt)?.to_string());
     Ok(())
