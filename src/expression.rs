@@ -99,34 +99,34 @@ impl fmt::Display for Expr {
                     .join(" "),
                 ret.to_string()
             ),
-            Expr::BinPlus(exp1, exp2) => write!(f, "({} + {})", exp1.to_string(), exp2.to_string()),
-            Expr::BinMinus(exp1, exp2) => write!(f, "({} - {})", exp1.to_string(), exp2.to_string()),
-            Expr::BinMult(exp1, exp2) => write!(f, "({} * {})", exp1.to_string(), exp2.to_string()),
-            Expr::BinDiv(exp1, exp2) => write!(f, "({} / {})", exp1.to_string(), exp2.to_string()),
-            Expr::BinEq(exp1, exp2) => write!(f, "({} == {})", exp1.to_string(), exp2.to_string()),
-            Expr::BinNotEq(exp1, exp2) => write!(f, "({} != {})", exp1.to_string(), exp2.to_string()),
-            Expr::BinLT(exp1, exp2) => write!(f, "({} < {})", exp1.to_string(), exp2.to_string()),
-            Expr::BinGT(exp1, exp2) => write!(f, "({} > {})", exp1.to_string(), exp2.to_string()),
-            Expr::BinLE(exp1, exp2) => write!(f, "({} <= {})", exp1.to_string(), exp2.to_string()),
-            Expr::BinGE(exp1, exp2) => write!(f, "({} >= {})", exp1.to_string(), exp2.to_string()),
-            Expr::BinAnd(exp1, exp2) => write!(f, "({} && {})", exp1.to_string(), exp2.to_string()),
-            Expr::BinOr(exp1, exp2) => write!(f, "({} || {})", exp1.to_string(), exp2.to_string()),
-            Expr::UnaryMinus(exp1) => write!(f, "-{}", exp1.to_string()),
-            Expr::UnaryNot(exp1) => write!(f, "!{}", exp1.to_string()),
+            Expr::BinPlus(exp1, exp2) => write!(f, "({} + {})", exp1, exp2),
+            Expr::BinMinus(exp1, exp2) => write!(f, "({} - {})", exp1, exp2),
+            Expr::BinMult(exp1, exp2) => write!(f, "({} * {})", exp1, exp2),
+            Expr::BinDiv(exp1, exp2) => write!(f, "({} / {})", exp1, exp2),
+            Expr::BinEq(exp1, exp2) => write!(f, "({} == {})", exp1, exp2),
+            Expr::BinNotEq(exp1, exp2) => write!(f, "({} != {})", exp1, exp2),
+            Expr::BinLT(exp1, exp2) => write!(f, "({} < {})", exp1, exp2),
+            Expr::BinGT(exp1, exp2) => write!(f, "({} > {})", exp1, exp2),
+            Expr::BinLE(exp1, exp2) => write!(f, "({} <= {})", exp1, exp2),
+            Expr::BinGE(exp1, exp2) => write!(f, "({} >= {})", exp1, exp2),
+            Expr::BinAnd(exp1, exp2) => write!(f, "({} && {})", exp1, exp2),
+            Expr::BinOr(exp1, exp2) => write!(f, "({} || {})", exp1, exp2),
+            Expr::UnaryMinus(exp1) => write!(f, "-{}", exp1),
+            Expr::UnaryNot(exp1) => write!(f, "!{}", exp1),
             Expr::If(cond, exp1, exp2) => write!(f, 
                 "if ({}) {{ {} }} else {{ {} }}",
-                cond.to_string(),
-                exp1.to_string(),
-                exp2.to_string()
+                cond,
+                exp1,
+                exp2
             ),
             Expr::Assign(ident, expr) => {
-                write!(f, "let {ident} = {};", expr.to_string())
+                write!(f, "let {ident} = {};", expr)
             }
             Expr::Lambda(var, _) => {
                 write!(f, "<lambda ({})>", var)
             }
             Expr::App(fun, var) => {
-                write!(f, "{}({})", fun.to_string(), var.to_string())
+                write!(f, "{}({})", fun, var)
             }
         }
     }
