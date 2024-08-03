@@ -1,3 +1,5 @@
+use core::fmt;
+
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub enum Expr {
     Int(i64),
@@ -81,12 +83,15 @@ impl Expr {
         Expr::Program(prog, Box::new(ret))
     }
 
-    pub fn to_string(&self) -> String {
+}
+
+impl fmt::Display for Expr {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Expr::Int(v) => format!("Int({})", v),
-            Expr::Bool(v) => v.to_string(),
-            Expr::Ident(name) => name.clone(),
-            Expr::Program(v, ret) => format!(
+            Expr::Int(v) => write!(f, "Int({})", v),
+            Expr::Bool(v) => write!(f, "{}", v),
+            Expr::Ident(name) => write!(f, "{}", name),
+            Expr::Program(v, ret) => write!(f, 
                 "{} {}",
                 v.iter()
                     .map(|x| x.to_string())
@@ -94,34 +99,34 @@ impl Expr {
                     .join(" "),
                 ret.to_string()
             ),
-            Expr::BinPlus(exp1, exp2) => format!("({} + {})", exp1.to_string(), exp2.to_string()),
-            Expr::BinMinus(exp1, exp2) => format!("({} - {})", exp1.to_string(), exp2.to_string()),
-            Expr::BinMult(exp1, exp2) => format!("({} * {})", exp1.to_string(), exp2.to_string()),
-            Expr::BinDiv(exp1, exp2) => format!("({} / {})", exp1.to_string(), exp2.to_string()),
-            Expr::BinEq(exp1, exp2) => format!("({} == {})", exp1.to_string(), exp2.to_string()),
-            Expr::BinNotEq(exp1, exp2) => format!("({} != {})", exp1.to_string(), exp2.to_string()),
-            Expr::BinLT(exp1, exp2) => format!("({} < {})", exp1.to_string(), exp2.to_string()),
-            Expr::BinGT(exp1, exp2) => format!("({} > {})", exp1.to_string(), exp2.to_string()),
-            Expr::BinLE(exp1, exp2) => format!("({} <= {})", exp1.to_string(), exp2.to_string()),
-            Expr::BinGE(exp1, exp2) => format!("({} >= {})", exp1.to_string(), exp2.to_string()),
-            Expr::BinAnd(exp1, exp2) => format!("({} && {})", exp1.to_string(), exp2.to_string()),
-            Expr::BinOr(exp1, exp2) => format!("({} || {})", exp1.to_string(), exp2.to_string()),
-            Expr::UnaryMinus(exp1) => format!("-{}", exp1.to_string()),
-            Expr::UnaryNot(exp1) => format!("!{}", exp1.to_string()),
-            Expr::If(cond, exp1, exp2) => format!(
+            Expr::BinPlus(exp1, exp2) => write!(f, "({} + {})", exp1.to_string(), exp2.to_string()),
+            Expr::BinMinus(exp1, exp2) => write!(f, "({} - {})", exp1.to_string(), exp2.to_string()),
+            Expr::BinMult(exp1, exp2) => write!(f, "({} * {})", exp1.to_string(), exp2.to_string()),
+            Expr::BinDiv(exp1, exp2) => write!(f, "({} / {})", exp1.to_string(), exp2.to_string()),
+            Expr::BinEq(exp1, exp2) => write!(f, "({} == {})", exp1.to_string(), exp2.to_string()),
+            Expr::BinNotEq(exp1, exp2) => write!(f, "({} != {})", exp1.to_string(), exp2.to_string()),
+            Expr::BinLT(exp1, exp2) => write!(f, "({} < {})", exp1.to_string(), exp2.to_string()),
+            Expr::BinGT(exp1, exp2) => write!(f, "({} > {})", exp1.to_string(), exp2.to_string()),
+            Expr::BinLE(exp1, exp2) => write!(f, "({} <= {})", exp1.to_string(), exp2.to_string()),
+            Expr::BinGE(exp1, exp2) => write!(f, "({} >= {})", exp1.to_string(), exp2.to_string()),
+            Expr::BinAnd(exp1, exp2) => write!(f, "({} && {})", exp1.to_string(), exp2.to_string()),
+            Expr::BinOr(exp1, exp2) => write!(f, "({} || {})", exp1.to_string(), exp2.to_string()),
+            Expr::UnaryMinus(exp1) => write!(f, "-{}", exp1.to_string()),
+            Expr::UnaryNot(exp1) => write!(f, "!{}", exp1.to_string()),
+            Expr::If(cond, exp1, exp2) => write!(f, 
                 "if ({}) {{ {} }} else {{ {} }}",
                 cond.to_string(),
                 exp1.to_string(),
                 exp2.to_string()
             ),
             Expr::Assign(ident, expr) => {
-                format!("let {ident} = {};", expr.to_string())
+                write!(f, "let {ident} = {};", expr.to_string())
             }
             Expr::Lambda(var, _) => {
-                format!("<lambda ({})>", var)
+                write!(f, "<lambda ({})>", var)
             }
             Expr::App(fun, var) => {
-                format!("{}({})", fun.to_string(), var.to_string())
+                write!(f, "{}({})", fun.to_string(), var.to_string())
             }
         }
     }

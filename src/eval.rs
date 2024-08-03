@@ -1,4 +1,5 @@
 use std::{cell::RefCell, rc::Rc};
+use core::fmt;
 
 use anyhow::{bail, Ok, Result};
 
@@ -11,12 +12,12 @@ pub enum Value {
     Lambda(String, Box<Expr>, Env),
 }
 
-impl Value {
-    pub fn to_string(&self) -> String {
+impl fmt::Display for Value {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Value::Bool(b) => b.to_string(),
-            Value::Int(i) => i.to_string(),
-            Value::Lambda(v, _, _) => format!("lambda ({v})"),
+            Value::Bool(b) => write!(f, "{b}"),
+            Value::Int(i) => write!(f, "{i}"),
+            Value::Lambda(v, _, _) => write!(f, "lambda ({v})"),
         }
     }
 }
