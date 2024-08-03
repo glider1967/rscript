@@ -107,20 +107,14 @@ impl Parser {
             let exp = self.expr();
             self.expect(Token::Symbol(")".to_owned()))?;
             exp
+        } else if let Some(num) = self.consume_int() {
+            Ok(Expr::int(num))
+        } else if let Some(b) = self.consume_bool() {
+            Ok(Expr::boolean(b))
+        } else if let Some(name) = self.consume_ident() {
+            Ok(Expr::ident(name))
         } else {
-            if let Some(num) = self.consume_int() {
-                Ok(Expr::int(num))
-            } else {
-                if let Some(b) = self.consume_bool() {
-                    Ok(Expr::boolean(b))
-                } else {
-                    if let Some(name) = self.consume_ident() {
-                        Ok(Expr::ident(name))
-                    } else {
-                        bail!("unexpected token: {:?}", self.tokens.last())
-                    }
-                }
-            }
+            bail!("unexpected token: {:?}", self.tokens.last())
         }
     }
 
