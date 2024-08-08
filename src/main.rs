@@ -26,7 +26,7 @@ fn main() -> Result<()> {
     )
     .prog()
     .context("Parse Error")?;
-    dbg!(&stmt.expr.to_string());
+    dbg!(&stmt.to_string());
 
     dbg!(TypeInfer::new().infer_type(&stmt)?);
 
@@ -44,7 +44,7 @@ fn main() -> Result<()> {
         "#,
     )
     .prog()?;
-    dbg!(&stmt.expr.to_string());
+    dbg!(&stmt.to_string());
     // dbg!(TypeInfer::new().infer_type(&stmt)?);
 
     dbg!(Eval::new().eval(&stmt)?.to_string());

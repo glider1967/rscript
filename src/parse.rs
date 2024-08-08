@@ -380,11 +380,6 @@ mod parse {
     #[test]
     fn parse_num() {
         let expr: Expr = Parser::new("233425").expr().unwrap();
-        assert_eq!(
-            expr,
-            Expr {
-                expr: crate::expression::InnerExpr::Int(233425),
-            }
-        );
+        assert_eq!(expr, Expr::Int(233425),);
     }
 }

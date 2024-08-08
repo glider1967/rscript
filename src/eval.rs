@@ -2,11 +2,7 @@ use std::{cell::RefCell, rc::Rc};
 
 use anyhow::{bail, Ok, Result};
 
-use crate::{
-    environment::Env,
-    expression::{Expr, InnerExpr},
-    internal_value::Value,
-};
+use crate::{environment::Env, expression::Expr, internal_value::Value};
 
 pub struct Eval {
     env: Rc<RefCell<Env>>,
@@ -26,17 +22,17 @@ impl Eval {
     }
 
     pub fn eval(&self, ast: &Expr) -> Result<Value> {
-        match &ast.expr {
-            InnerExpr::Int(v) => Ok(Value::Int(*v)),
-            InnerExpr::Bool(v) => Ok(Value::Bool(*v)),
-            InnerExpr::Ident(name) => self.env.borrow().get(name),
-            InnerExpr::Program(prog, ret) => {
+        match &ast {
+            Expr::Int(v) => Ok(Value::Int(*v)),
+            Expr::Bool(v) => Ok(Value::Bool(*v)),
+            Expr::Ident(name) => self.env.borrow().get(name),
+            Expr::Program(prog, ret) => {
                 for expr in prog {
                     let _ = self.eval(&expr);
                 }
                 self.eval(&ret)
             }
-            InnerExpr::BinOp(op, exp1, exp2) => {
+            Expr::BinOp(op, exp1, exp2) => {
                 let v1 = self.eval(&exp1)?;
                 let v2 = self.eval(&exp2)?;
                 match (v1, v2) {
@@ -63,7 +59,7 @@ impl Eval {
                     }
                 }
             }
-            InnerExpr::UnaryOp(op, exp1) => {
+            Expr::UnaryOp(op, exp1) => {
                 let v1 = self.eval(&exp1)?;
                 match v1 {
                     Value::Int(x) => match op.as_str() {
@@ -79,7 +75,7 @@ impl Eval {
                     }
                 }
             }
-            InnerExpr::If(cond, exp1, exp2) => {
+            Expr::If(cond, exp1, exp2) => {
                 if let Value::Bool(b) = self.eval(&cond)? {
                     if b {
                         self.eval(&exp1)
@@ -90,16 +86,16 @@ impl Eval {
                     bail!("if expression: non-bool condition!");
                 }
             }
-            InnerExpr::Assign(name, _, expr) => {
+            Expr::Assign(name, _, expr) => {
                 let val = self.eval(&expr)?;
                 self.env.borrow_mut().set(name, val.clone());
                 Ok(val)
             }
-            InnerExpr::Lambda(var, _, expr) => {
+            Expr::Lambda(var, _, expr) => {
                 let new_env = Env::with_outer(Rc::clone(&self.env));
                 Ok(Value::Lambda(var.clone(), expr.clone(), new_env))
             }
-            InnerExpr::App(fun, var) => {
+            Expr::App(fun, var) => {
                 if let Value::Lambda(arg, expr, env) = self.eval(&fun)? {
                     let inner_eval = Eval::with_env(env);
                     inner_eval.env.borrow_mut().set(&arg, self.eval(&var)?);

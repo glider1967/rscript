@@ -27,7 +27,7 @@ use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use anyhow::{bail, Ok, Result};
 
-use crate::expression::{Expr, InnerExpr};
+use crate::expression::Expr;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TypeEnv {
@@ -83,21 +83,21 @@ impl TypeInfer {
     }
 
     pub fn infer_type(&mut self, ast: &Expr) -> Result<Type> {
-        match &ast.expr {
-            InnerExpr::Int(_) => Ok(Type::Int),
-            InnerExpr::Bool(_) => Ok(Type::Bool),
-            InnerExpr::Ident(name) => {
+        match &ast {
+            Expr::Int(_) => Ok(Type::Int),
+            Expr::Bool(_) => Ok(Type::Bool),
+            Expr::Ident(name) => {
                 let actual_type = self.env.borrow().get(name.clone())?;
                 Ok(actual_type)
             }
-            InnerExpr::Program(v, ret) => {
+            Expr::Program(v, ret) => {
                 for expr in v {
                     let _ = self.infer_type(expr)?;
                 }
                 let ret_type = self.infer_type(&ret)?;
                 Ok(ret_type)
             }
-            InnerExpr::BinOp(op, exp1, exp2) => match op.as_str() {
+            Expr::BinOp(op, exp1, exp2) => match op.as_str() {
                 "+" | "-" | "*" | "/" => {
                     let t1 = self.infer_type(&exp1)?;
                     let t2 = self.infer_type(&exp2)?;
@@ -139,7 +139,7 @@ impl TypeInfer {
                 }
                 _ => bail!("invalid operator: {}", op),
             },
-            InnerExpr::UnaryOp(op, expr) => match op.as_str() {
+            Expr::UnaryOp(op, expr) => match op.as_str() {
                 "-" => {
                     let t1 = self.infer_type(&expr)?;
                     if t1 != Type::Int {
@@ -156,7 +156,7 @@ impl TypeInfer {
                 }
                 _ => bail!("invalid operator: {}", op),
             },
-            InnerExpr::If(cond, exp1, exp2) => {
+            Expr::If(cond, exp1, exp2) => {
                 let t0 = self.infer_type(&cond)?;
                 let t1 = self.infer_type(&exp1)?;
                 let t2 = self.infer_type(&exp2)?;
@@ -168,7 +168,7 @@ impl TypeInfer {
                 }
                 Ok(t1)
             }
-            InnerExpr::Assign(ident, ty, expr) => {
+            Expr::Assign(ident, ty, expr) => {
                 let actual = self.infer_type(&expr)?;
                 if ty != &actual {
                     bail!("invalid type of assign: expected:{} actual:{}", ty, actual)
@@ -176,13 +176,13 @@ impl TypeInfer {
                 self.env.borrow_mut().set(ident.clone(), ty.clone());
                 Ok(actual)
             }
-            InnerExpr::Lambda(var, ty, expr) => {
+            Expr::Lambda(var, ty, expr) => {
                 let mut new_type_infer = Self::from(TypeEnv::with_outer(Rc::clone(&self.env)));
                 new_type_infer.env.borrow_mut().set(var.clone(), ty.clone());
                 let ret_type = new_type_infer.infer_type(&expr)?;
                 Ok(Type::func(ty.clone(), ret_type))
             }
-            InnerExpr::App(fun, var) => {
+            Expr::App(fun, var) => {
                 let fun_type = self.infer_type(&fun)?;
                 let var_type = self.infer_type(&var)?;
                 if let Type::Func(dom, cod) = fun_type {
