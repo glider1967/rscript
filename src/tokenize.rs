@@ -7,15 +7,13 @@ pub enum Token {
     Ident(String),
 }
 
-pub struct Tokenizer {
-    input: String,
+pub struct Tokenizer<'a> {
+    input: &'a str,
 }
 
-impl Tokenizer {
-    pub fn new(input: &str) -> Self {
-        Self {
-            input: input.to_owned(),
-        }
+impl<'a> Tokenizer<'a> {
+    pub fn new(input: &'a str) -> Self {
+        Self { input }
     }
 
     pub fn tokenize(&self) -> Vec<Token> {

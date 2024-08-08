@@ -25,8 +25,8 @@ impl Env {
         }
     }
 
-    pub fn get(&self, name: String) -> Result<Value> {
-        if let Some(val) = self.env.get(&name) {
+    pub fn get(&self, name: &str) -> Result<Value> {
+        if let Some(val) = self.env.get(name) {
             Ok(val.clone())
         } else {
             if let Some(outer) = &self.outer {
@@ -37,7 +37,7 @@ impl Env {
         }
     }
 
-    pub fn set(&mut self, name: String, val: Value) {
-        self.env.insert(name, val);
+    pub fn set(&mut self, name: &str, val: Value) {
+        self.env.insert(name.to_string(), val);
     }
 }

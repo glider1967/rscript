@@ -29,7 +29,7 @@ impl Eval {
         match &ast.expr {
             InnerExpr::Int(v) => Ok(Value::Int(*v)),
             InnerExpr::Bool(v) => Ok(Value::Bool(*v)),
-            InnerExpr::Ident(name) => self.env.borrow().get(name.clone()),
+            InnerExpr::Ident(name) => self.env.borrow().get(name),
             InnerExpr::Program(prog, ret) => {
                 for expr in prog {
                     let _ = self.eval(&expr);
@@ -92,7 +92,7 @@ impl Eval {
             }
             InnerExpr::Assign(name, _, expr) => {
                 let val = self.eval(&expr)?;
-                self.env.borrow_mut().set(name.clone(), val.clone());
+                self.env.borrow_mut().set(name, val.clone());
                 Ok(val)
             }
             InnerExpr::Lambda(var, _, expr) => {
@@ -102,7 +102,7 @@ impl Eval {
             InnerExpr::App(fun, var) => {
                 if let Value::Lambda(arg, expr, env) = self.eval(&fun)? {
                     let inner_eval = Eval::with_env(env);
-                    inner_eval.env.borrow_mut().set(arg, self.eval(&var)?);
+                    inner_eval.env.borrow_mut().set(&arg, self.eval(&var)?);
                     inner_eval.eval(&expr)
                 } else {
                     bail!("eval error: application to non-lambda!")
