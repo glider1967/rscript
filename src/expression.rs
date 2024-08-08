@@ -1,18 +1,41 @@
 use core::fmt;
 
-use crate::types::Type;
+#[derive(PartialEq, Eq, Debug, Clone)]
+pub enum ExpectedType {
+    Int,
+    Bool,
+    Func(Box<ExpectedType>, Box<ExpectedType>),
+    Unknown,
+}
+
+impl ExpectedType {
+    pub fn func(t1: Self, t2: Self) -> Self {
+        Self::Func(Box::new(t1), Box::new(t2))
+    }
+}
+
+impl fmt::Display for ExpectedType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::Bool => write!(f, "bool"),
+            Self::Int => write!(f, "int"),
+            Self::Func(t1, t2) => write!(f, "({t1} -> {t2})"),
+            Self::Unknown => write!(f, "?"),
+        }
+    }
+}
 
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub enum Expr {
     Int(i64),
     Bool(bool),
-    Ident(String),
+    Variable(String),
     Program(Vec<Expr>, Box<Expr>),
     BinOp(String, Box<Expr>, Box<Expr>),
     UnaryOp(String, Box<Expr>),
     If(Box<Expr>, Box<Expr>, Box<Expr>),
-    Assign(String, Type, Box<Expr>),
-    Lambda(String, Type, Box<Expr>),
+    Assign(String, ExpectedType, Box<Expr>),
+    Lambda(String, ExpectedType, Box<Expr>),
     App(Box<Expr>, Box<Expr>),
 }
 
@@ -26,10 +49,10 @@ impl Expr {
     }
 
     pub fn ident(name: String) -> Self {
-        Expr::Ident(name)
+        Expr::Variable(name)
     }
 
-    pub fn assign(name: String, ty: Type, expr: Expr) -> Self {
+    pub fn assign(name: String, ty: ExpectedType, expr: Expr) -> Self {
         Expr::Assign(name, ty, Box::new(expr))
     }
 
@@ -49,7 +72,7 @@ impl Expr {
         Expr::If(Box::new(cond), Box::new(expr.clone()), Box::new(elseexp))
     }
 
-    pub fn lambda(name: String, argty: Type, expr: Expr) -> Self {
+    pub fn lambda(name: String, argty: ExpectedType, expr: Expr) -> Self {
         Expr::Lambda(name, argty, Box::new(expr.clone()))
     }
 
@@ -63,7 +86,7 @@ impl fmt::Display for Expr {
         match self {
             Expr::Int(v) => write!(f, "Int({})", v),
             Expr::Bool(v) => write!(f, "{}", v),
-            Expr::Ident(name) => write!(f, "{}", name),
+            Expr::Variable(name) => write!(f, "{}", name),
             Expr::Program(v, ret) => write!(
                 f,
                 "{} {}",

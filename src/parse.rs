@@ -1,5 +1,5 @@
 use crate::{
-    expression::Expr,
+    expression::{ExpectedType, Expr},
     tokenize::{Token, Tokenizer},
     types::Type,
 };
@@ -340,28 +340,28 @@ impl Parser {
 
     // =====================================================================
 
-    fn parse_ty(&mut self) -> Result<Type> {
+    fn parse_ty(&mut self) -> Result<ExpectedType> {
         self.fntype()
     }
 
-    fn fntype(&mut self) -> Result<Type> {
+    fn fntype(&mut self) -> Result<ExpectedType> {
         let mut ret = self.primitive_type()?;
         loop {
             if self.consume(sym!("->")) {
                 let ty = self.primitive_type()?;
-                ret = Type::func(ty, ret);
+                ret = ExpectedType::func(ty, ret);
             } else {
                 return Ok(ret);
             }
         }
     }
 
-    fn primitive_type(&mut self) -> Result<Type> {
+    fn primitive_type(&mut self) -> Result<ExpectedType> {
         if let Some(Token::Type(val)) = self.tokens.pop() {
             if &val == "int" {
-                Ok(Type::Int)
+                Ok(ExpectedType::Int)
             } else if &val == "bool" {
-                Ok(Type::Bool)
+                Ok(ExpectedType::Bool)
             } else {
                 bail!("unexpected type: {val}")
             }

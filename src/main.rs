@@ -28,8 +28,6 @@ fn main() -> Result<()> {
     .context("Parse Error")?;
     dbg!(&stmt.to_string());
 
-    dbg!(TypeInfer::new().infer_type(&stmt)?);
-
     dbg!(Eval::new()
         .eval(&stmt)
         .context("Evaluation Error")?

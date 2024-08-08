@@ -25,7 +25,7 @@ impl Eval {
         match &ast {
             Expr::Int(v) => Ok(Value::Int(*v)),
             Expr::Bool(v) => Ok(Value::Bool(*v)),
-            Expr::Ident(name) => self.env.borrow().get(name),
+            Expr::Variable(name) => self.env.borrow().get(name),
             Expr::Program(prog, ret) => {
                 for expr in prog {
                     let _ = self.eval(&expr);
