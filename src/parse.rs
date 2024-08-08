@@ -1,5 +1,5 @@
 use crate::{
-    expression::{ExpectedType, Expr},
+    expression::Expr,
     tokenize::{Token, Tokenizer},
     types::Type,
 };
@@ -110,8 +110,11 @@ impl Parser {
         if self.consume(kwd!("lambda")) {
             self.expect(sym!("("))?;
             let ident = self.expect_ident()?;
-            self.expect(sym!(":"))?;
-            let ty = self.parse_ty()?;
+            let ty = if self.consume(sym!(":")) {
+                Some(self.parse_ty()?)
+            } else {
+                None
+            };
             self.expect(sym!(")"))?;
             self.expect(sym!("{"))?;
             let prog = self.prog()?;
@@ -126,7 +129,7 @@ impl Parser {
         } else if let Some(b) = self.consume_bool() {
             Ok(Expr::boolean(b))
         } else if let Some(name) = self.consume_ident() {
-            Ok(Expr::ident(name))
+            Ok(Expr::variable(name))
         } else {
             bail!("unexpected token: {:?}", self.tokens.last())
         }
@@ -326,8 +329,11 @@ impl Parser {
         let mut prog = vec![];
         while self.consume(Token::Keyword("let".to_owned())) {
             let ident = self.expect_ident()?;
-            self.expect(sym!(":"))?;
-            let ty = self.parse_ty()?;
+            let ty = if self.consume(sym!(":")) {
+                Some(self.parse_ty()?)
+            } else {
+                None
+            };
             self.expect(sym!("="))?;
             let expr = self.expr()?;
             self.expect(sym!(";"))?;
@@ -340,28 +346,28 @@ impl Parser {
 
     // =====================================================================
 
-    fn parse_ty(&mut self) -> Result<ExpectedType> {
+    fn parse_ty(&mut self) -> Result<Type> {
         self.fntype()
     }
 
-    fn fntype(&mut self) -> Result<ExpectedType> {
+    fn fntype(&mut self) -> Result<Type> {
         let mut ret = self.primitive_type()?;
         loop {
             if self.consume(sym!("->")) {
                 let ty = self.primitive_type()?;
-                ret = ExpectedType::func(ty, ret);
+                ret = Type::func(ty, ret);
             } else {
                 return Ok(ret);
             }
         }
     }
 
-    fn primitive_type(&mut self) -> Result<ExpectedType> {
+    fn primitive_type(&mut self) -> Result<Type> {
         if let Some(Token::Type(val)) = self.tokens.pop() {
             if &val == "int" {
-                Ok(ExpectedType::Int)
+                Ok(Type::Int)
             } else if &val == "bool" {
-                Ok(ExpectedType::Bool)
+                Ok(Type::Bool)
             } else {
                 bail!("unexpected type: {val}")
             }

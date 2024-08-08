@@ -1,29 +1,6 @@
 use core::fmt;
 
-#[derive(PartialEq, Eq, Debug, Clone)]
-pub enum ExpectedType {
-    Int,
-    Bool,
-    Func(Box<ExpectedType>, Box<ExpectedType>),
-    Unknown,
-}
-
-impl ExpectedType {
-    pub fn func(t1: Self, t2: Self) -> Self {
-        Self::Func(Box::new(t1), Box::new(t2))
-    }
-}
-
-impl fmt::Display for ExpectedType {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Self::Bool => write!(f, "bool"),
-            Self::Int => write!(f, "int"),
-            Self::Func(t1, t2) => write!(f, "({t1} -> {t2})"),
-            Self::Unknown => write!(f, "?"),
-        }
-    }
-}
+use crate::types::Type;
 
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub enum Expr {
@@ -34,8 +11,8 @@ pub enum Expr {
     BinOp(String, Box<Expr>, Box<Expr>),
     UnaryOp(String, Box<Expr>),
     If(Box<Expr>, Box<Expr>, Box<Expr>),
-    Assign(String, ExpectedType, Box<Expr>),
-    Lambda(String, ExpectedType, Box<Expr>),
+    Assign(String, Option<Type>, Box<Expr>),
+    Lambda(String, Option<Type>, Box<Expr>),
     App(Box<Expr>, Box<Expr>),
 }
 
@@ -48,11 +25,11 @@ impl Expr {
         Expr::Bool(b)
     }
 
-    pub fn ident(name: String) -> Self {
+    pub fn variable(name: String) -> Self {
         Expr::Variable(name)
     }
 
-    pub fn assign(name: String, ty: ExpectedType, expr: Expr) -> Self {
+    pub fn assign(name: String, ty: Option<Type>, expr: Expr) -> Self {
         Expr::Assign(name, ty, Box::new(expr))
     }
 
@@ -61,23 +38,23 @@ impl Expr {
     }
 
     pub fn unaryop(name: String, expr: Expr) -> Self {
-        Expr::UnaryOp(name, Box::new(expr.clone()))
+        Expr::UnaryOp(name, Box::new(expr))
     }
 
     pub fn app(fun: Expr, arg: Expr) -> Self {
-        Expr::App(Box::new(fun.clone()), Box::new(arg))
+        Expr::App(Box::new(fun), Box::new(arg))
     }
 
     pub fn if_expr(cond: Expr, expr: Expr, elseexp: Expr) -> Self {
-        Expr::If(Box::new(cond), Box::new(expr.clone()), Box::new(elseexp))
+        Expr::If(Box::new(cond), Box::new(expr), Box::new(elseexp))
     }
 
-    pub fn lambda(name: String, argty: ExpectedType, expr: Expr) -> Self {
-        Expr::Lambda(name, argty, Box::new(expr.clone()))
+    pub fn lambda(name: String, argty: Option<Type>, expr: Expr) -> Self {
+        Expr::Lambda(name, argty, Box::new(expr))
     }
 
     pub fn program(prog: Vec<Expr>, ret: Expr) -> Self {
-        Expr::Program(prog, Box::new(ret.clone()))
+        Expr::Program(prog, Box::new(ret))
     }
 }
 
@@ -102,10 +79,20 @@ impl fmt::Display for Expr {
                 write!(f, "if ({}) {{ {} }} else {{ {} }}", cond, exp1, exp2)
             }
             Expr::Assign(ident, ty, expr) => {
-                write!(f, "let {ident}: {ty} = {};", expr)
+                let tt = if ty.is_some() {
+                    ty.as_ref().unwrap().to_string()
+                } else {
+                    "?".to_string()
+                };
+                write!(f, "let {ident}: {} = {};", tt, expr)
             }
             Expr::Lambda(var, ty, expr) => {
-                write!(f, "lambda ({var}:{ty}) {{ {} }}", expr)
+                let tt = if ty.is_some() {
+                    ty.as_ref().unwrap().to_string()
+                } else {
+                    "?".to_string()
+                };
+                write!(f, "lambda ({var}:{}) {{ {} }}", tt, expr)
             }
             Expr::App(fun, var) => {
                 write!(f, "{}({})", fun, var)
