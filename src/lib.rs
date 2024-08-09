@@ -24,8 +24,11 @@ pub fn greet(name: &str) {
 #[wasm_bindgen]
 pub fn eval_script(line: &str) -> JsValue {
     match Parser::new(line).prog() {
-        Ok(stmt) => match Eval::new().eval(&stmt) {
-            Ok(val) => val.to_string().into(),
+        Ok(stmt) => match TypeInfer::new().infer_type(&stmt) {
+            Ok(_) => match Eval::new().eval(&stmt) {
+                Ok(val) => val.to_string().into(),
+                Err(err) => err.to_string().into(),
+            },
             Err(err) => err.to_string().into(),
         },
         Err(err) => err.to_string().into(),
