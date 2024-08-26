@@ -15,13 +15,14 @@ mod types;
 fn main() -> Result<()> {
     let stmt = Parser::new(
         r#"
-        let f: int -> int -> int = lambda (w: int) {
-            lambda (v: int) {
-                let a: int = w*100;
+        let w = true;
+        let f = lambda (w) {
+            lambda (v) {
+                let a = w*100;
                 a + v
             }
         };
-        f(2)(7)
+        f
         "#,
     )
     .prog()
