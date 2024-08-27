@@ -80,10 +80,10 @@ impl TypeInfer {
         }
     }
 
-    fn from(env: TypeEnv) -> Self {
+    fn from(env: TypeEnv, next: u64) -> Self {
         Self {
             env: Rc::new(RefCell::new(env)),
-            next_typevar_id: 0,
+            next_typevar_id: next,
         }
     }
 
@@ -162,13 +162,17 @@ impl TypeInfer {
                 Ok(actual)
             }
             Expr::Lambda(var, ty, expr) => {
-                let mut new_type_infer = Self::from(TypeEnv::with_outer(Rc::clone(&self.env)));
                 let nty = self.new_typevar();
+                let mut new_type_infer = Self::from(
+                    TypeEnv::with_outer(Rc::clone(&self.env)),
+                    self.next_typevar_id,
+                );
                 new_type_infer
                     .env
                     .borrow_mut()
                     .set(var.clone(), nty.clone());
                 let ret_type = new_type_infer.infer_type(&expr)?;
+                self.next_typevar_id = new_type_infer.next_typevar_id;
                 if ty.is_some() {
                     Self::unify(&ty.as_ref().unwrap(), &nty)?;
                 }

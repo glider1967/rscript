@@ -19,7 +19,7 @@ fn main() -> Result<()> {
         let f = lambda (w) {
             lambda (v) {
                 let a = w*100;
-                a + v
+                v
             }
         };
         f
