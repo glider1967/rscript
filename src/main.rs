@@ -14,27 +14,27 @@ mod type_infer;
 mod types;
 
 fn main() -> Result<()> {
-    let stmt = Parser::new(
-        r#"
-        let w = true;
-        let f: (int -> int) -> int -> int = lambda (w) {
-            lambda(x) {
-                x
-            }
-        };
-        f
-        "#,
-    )
-    .prog()
-    .context("Parse Error")?;
-    dbg!(&stmt.to_string());
+    // let stmt = Parser::new(
+    //     r#"
+    //     let w = true;
+    //     let f: (int -> int) -> int -> int = lambda (w) {
+    //         lambda(x) {
+    //             x
+    //         }
+    //     };
+    //     f
+    //     "#,
+    // )
+    // .prog()
+    // .context("Parse Error")?;
+    // dbg!(&stmt.to_string());
 
-    dbg!(TypeInfer::new().infer_type(&stmt))?;
+    // dbg!(TypeInfer::new().infer_type(&stmt))?;
 
-    dbg!(Eval::new()
-        .eval(&stmt)
-        .context("Evaluation Error")?
-        .to_string());
+    // dbg!(Eval::new()
+    //     .eval(&stmt)
+    //     .context("Evaluation Error")?
+    //     .to_string());
 
     let stmt = Parser::new(
         r#"
@@ -46,7 +46,7 @@ fn main() -> Result<()> {
     )
     .prog()?;
     dbg!(&stmt.to_string());
-    // dbg!(TypeInfer::new().infer_type(&stmt)?);
+    dbg!(TypeInfer::new().infer_type(&stmt)?);
 
     dbg!(Eval::new().eval(&stmt)?.to_string());
     Ok(())

@@ -95,7 +95,7 @@ impl TypeInfer {
                     let t2 = self.infer_type(&exp2)?;
                     Self::unify(&t1, &Type::Int)?;
                     Self::unify(&t2, &Type::Int)?;
-                    Ok(Type::Int)
+                    Ok(Type::Bool)
                 }
                 "&&" | "||" => {
                     let t1 = self.infer_type(&exp1)?;
@@ -133,12 +133,13 @@ impl TypeInfer {
                     None => self.new_typevar(),
                 };
 
-                self.env.borrow_mut().set(ident.clone(), nty);
+                self.env.borrow_mut().set(ident.clone(), nty.clone());
                 let actual = self.infer_type(&expr)?;
 
                 if let Some(expected) = ty {
                     Self::unify(expected, &actual)?;
                 }
+                Self::unify(&nty, &actual)?;
                 self.generalize(&actual);
                 self.env.borrow_mut().set(ident.clone(), actual.clone());
                 Ok(actual)
@@ -154,10 +155,10 @@ impl TypeInfer {
                     .borrow_mut()
                     .set(var.clone(), nty.clone());
                 let ret_type = new_type_infer.infer_type(&expr)?;
-                self.next_typevar_id = new_type_infer.next_typevar_id;
                 if ty.is_some() {
                     Self::unify(&ty.as_ref().unwrap(), &nty)?;
                 }
+                self.next_typevar_id = new_type_infer.next_typevar_id;
                 Ok(Type::func(nty, ret_type))
             }
             Expr::App(fun, var) => {
