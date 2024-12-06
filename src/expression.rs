@@ -61,9 +61,9 @@ impl Expr {
 impl fmt::Display for Expr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Expr::Int(v) => write!(f, "Int({})", v),
-            Expr::Bool(v) => write!(f, "{}", v),
-            Expr::Variable(name) => write!(f, "{}", name),
+            Expr::Int(v) => write!(f, "{v}"),
+            Expr::Bool(v) => write!(f, "{v}"),
+            Expr::Variable(name) => write!(f, "{name}"),
             Expr::Program(v, ret) => write!(
                 f,
                 "{} {}",
@@ -73,10 +73,10 @@ impl fmt::Display for Expr {
                     .join(" "),
                 ret.to_string()
             ),
-            Expr::BinOp(op, exp1, exp2) => write!(f, "({} {op} {})", exp1, exp2),
-            Expr::UnaryOp(op, expr) => write!(f, "{op}{}", expr),
+            Expr::BinOp(op, exp1, exp2) => write!(f, "({exp1} {op} {exp2})"),
+            Expr::UnaryOp(op, expr) => write!(f, "{op}({expr})"),
             Expr::If(cond, exp1, exp2) => {
-                write!(f, "if ({}) {{ {} }} else {{ {} }}", cond, exp1, exp2)
+                write!(f, "if ({cond}) {{ {exp1} }} else {{ {exp2} }}")
             }
             Expr::Assign(ident, ty, expr) => {
                 let tt = if ty.is_some() {
@@ -84,7 +84,7 @@ impl fmt::Display for Expr {
                 } else {
                     "?".to_string()
                 };
-                write!(f, "let {ident}: {} = {};", tt, expr)
+                write!(f, "let {ident}: {tt} = {expr};")
             }
             Expr::Lambda(var, ty, expr) => {
                 let tt = if ty.is_some() {
@@ -92,10 +92,10 @@ impl fmt::Display for Expr {
                 } else {
                     "?".to_string()
                 };
-                write!(f, "lambda ({var}:{}) {{ {} }}", tt, expr)
+                write!(f, "lambda ({var}: {tt}) {{{expr} }}")
             }
             Expr::App(fun, var) => {
-                write!(f, "{}({})", fun, var)
+                write!(f, "{fun}({var})")
             }
         }
     }
