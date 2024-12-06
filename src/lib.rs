@@ -1,6 +1,6 @@
 use eval::Eval;
 use parse::Parser;
-use types::TypeInfer;
+use type_infer::TypeInfer;
 use wasm_bindgen::prelude::*;
 
 mod environment;
@@ -9,6 +9,7 @@ mod expression;
 mod internal_value;
 mod parse;
 mod tokenize;
+mod type_infer;
 mod types;
 
 #[wasm_bindgen]

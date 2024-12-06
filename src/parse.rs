@@ -351,28 +351,40 @@ impl Parser {
     }
 
     fn fntype(&mut self) -> Result<Type> {
-        let mut ret = self.primitive_type()?;
+        let mut list = vec![self.primary_type()?];
         loop {
             if self.consume(sym!("->")) {
-                let ty = self.primitive_type()?;
-                ret = Type::func(ty, ret);
+                let ty = self.primary_type()?;
+                list.push(ty);
             } else {
-                return Ok(ret);
+                break;
             }
         }
+        Ok(list
+            .iter()
+            .rev()
+            .cloned()
+            .reduce(|acc, x| Type::func(x, acc))
+            .unwrap())
     }
 
-    fn primitive_type(&mut self) -> Result<Type> {
-        if let Some(Token::Type(val)) = self.tokens.pop() {
-            if &val == "int" {
-                Ok(Type::Int)
-            } else if &val == "bool" {
-                Ok(Type::Bool)
-            } else {
-                bail!("unexpected type: {val}")
-            }
+    fn primary_type(&mut self) -> Result<Type> {
+        if self.consume(sym!("(")) {
+            let ty = self.parse_ty()?;
+            self.expect(sym!(")"))?;
+            Ok(ty)
         } else {
-            bail!("unexpected non-type")
+            if let Some(Token::Type(val)) = self.tokens.pop() {
+                if &val == "int" {
+                    Ok(Type::Int)
+                } else if &val == "bool" {
+                    Ok(Type::Bool)
+                } else {
+                    bail!("unexpected type: {val}")
+                }
+            } else {
+                bail!("unexpected non-type")
+            }
         }
     }
 }

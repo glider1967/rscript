@@ -2,7 +2,7 @@ use anyhow::{Context, Ok, Result};
 
 use eval::Eval;
 use parse::Parser;
-use types::TypeInfer;
+use type_infer::TypeInfer;
 
 mod environment;
 mod eval;
@@ -10,16 +10,16 @@ mod expression;
 mod internal_value;
 mod parse;
 mod tokenize;
+mod type_infer;
 mod types;
 
 fn main() -> Result<()> {
     let stmt = Parser::new(
         r#"
         let w = true;
-        let f = lambda (w) {
-            lambda (v) {
-                let a = w*100;
-                v
+        let f: (int -> int) -> int -> int = lambda (w) {
+            lambda(x) {
+                x
             }
         };
         f
@@ -38,7 +38,7 @@ fn main() -> Result<()> {
 
     let stmt = Parser::new(
         r#"
-        let f: int -> int = lambda (n: int) {
+        let f = lambda (n) {
             if(n == 1 || n == 2) { 1 } else { f(n-1) + f(n-2) }
         };
         f(10)
