@@ -205,7 +205,7 @@ impl Parser {
         let mut now;
         let mut prev;
 
-        if self.consume(sym!("==".to_owned())) {
+        if self.consume(sym!("==")) {
             now = self.rel()?.clone();
             ret = Expr::binop("==".to_owned(), ret, now.clone());
         } else if self.consume(sym!("!=".to_owned())) {
@@ -224,7 +224,7 @@ impl Parser {
                     ret,
                     Expr::binop("==".into(), prev.clone(), now.clone()),
                 );
-            } else if self.consume(sym!("!=".to_owned())) {
+            } else if self.consume(sym!("!=")) {
                 prev = now;
                 now = self.rel()?.clone();
                 ret = Expr::binop(
@@ -316,10 +316,10 @@ impl Parser {
     fn mul(&mut self) -> Result<Expr> {
         let mut ret = self.unary()?;
         loop {
-            if self.consume(sym!("*".to_owned())) {
+            if self.consume(sym!("*")) {
                 let exp = self.unary()?;
                 ret = Expr::binop("*".to_owned(), ret, exp);
-            } else if self.consume(sym!("/".to_owned())) {
+            } else if self.consume(sym!("/")) {
                 let exp = self.unary()?;
                 ret = Expr::binop("/".to_owned(), ret, exp);
             } else {
@@ -329,9 +329,9 @@ impl Parser {
     }
 
     fn unary(&mut self) -> Result<Expr> {
-        if self.consume(sym!("-".to_owned())) {
+        if self.consume(sym!("-")) {
             Ok(Expr::unaryop("-".into(), self.app()?))
-        } else if self.consume(sym!("!".to_owned())) {
+        } else if self.consume(sym!("!")) {
             Ok(Expr::unaryop("!".into(), self.app()?))
         } else {
             Ok(self.app()?)
@@ -358,7 +358,7 @@ impl Parser {
 
     pub fn prog(&mut self) -> Result<Expr> {
         let mut prog = vec![];
-        while self.consume(Token::Keyword("let".to_owned())) {
+        while self.consume(kwd!("let")) {
             let ident = self.expect_ident()?;
             let ty = if self.consume(sym!(":")) {
                 Some(self.parse_ty()?)

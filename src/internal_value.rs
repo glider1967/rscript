@@ -14,7 +14,7 @@ impl fmt::Display for Value {
         match self {
             Value::Bool(b) => write!(f, "{b}"),
             Value::Int(i) => write!(f, "{i}"),
-            Value::Lambda(v, _, _) => write!(f, "lambda ({v})"),
+            Value::Lambda(v, expr, _) => write!(f, "lambda ({v}) {{ {expr} }}"),
         }
     }
 }

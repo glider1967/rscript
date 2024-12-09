@@ -21,7 +21,7 @@ fn main() -> Result<()> {
         let f = lambda (w, x) {
             w(w(x))
         };
-        f(lambda(x) {x*x}, 3)
+        f
         "#,
     )
     .prog()
