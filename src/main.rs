@@ -18,37 +18,38 @@ fn main() -> Result<()> {
     let stmt = Parser::new(
         r#"
         let w = true;
-        let f = lambda (w) {
-            lambda(x) {
-                w(w(x))
-            }
+        let f = lambda (w, x) {
+            w(w(x))
         };
-        f
+        f(lambda(x) {x*x}, 3)
         "#,
     )
     .prog()
     .context("Parse Error")?;
-    dbg!(&stmt.to_string());
+    let string = &stmt.to_string();
+    dbg!(string);
 
-    dbg!(TypeInfer::new().infer_type(&stmt))?;
+    let inferred = TypeInfer::new().infer_type(&stmt)?;
+    println!("inffered: {}", inferred);
 
-    dbg!(Eval::new()
+    let evaluated = Eval::new()
         .eval(&stmt)
         .context("Evaluation Error")?
-        .to_string());
+        .to_string();
+    dbg!(evaluated);
 
-    let stmt = Parser::new(
-        r#"
-        let f = lambda (n) {
-            if(n == 1 || n == 2) { 1 } else { f(n-1) + f(n-2) }
-        };
-        f(10)
-        "#,
-    )
-    .prog()?;
-    dbg!(&stmt.to_string());
-    dbg!(TypeInfer::new().infer_type(&stmt)?);
+    // let stmt = Parser::new(
+    //     r#"
+    //     let f = lambda (n) {
+    //         if(n == 1 || n == 2) { 1 } else { f(n-1) + f(n-2) }
+    //     };
+    //     f(10)
+    //     "#,
+    // )
+    // .prog()?;
+    // dbg!(&stmt.to_string());
+    // dbg!(TypeInfer::new().infer_type(&stmt)?);
 
-    dbg!(Eval::new().eval(&stmt)?.to_string());
+    // dbg!(Eval::new().eval(&stmt)?.to_string());
     Ok(())
 }

@@ -106,20 +106,43 @@ impl Parser {
         self.parse_if()
     }
 
+    fn ident_and_opt_types(&mut self) -> Result<Vec<(String, Option<Type>)>> {
+        let ident = self.expect_ident()?;
+        let ty = if self.consume(sym!(":")) {
+            Some(self.parse_ty()?)
+        } else {
+            None
+        };
+        let mut list = vec![(ident, ty)];
+        loop {
+            if self.consume(sym!(",")) {
+                let ident = self.expect_ident()?;
+                let ty = if self.consume(sym!(":")) {
+                    Some(self.parse_ty()?)
+                } else {
+                    None
+                };
+                list.push((ident, ty));
+            } else {
+                break;
+            }
+        }
+        Ok(list)
+    }
+
     fn primary(&mut self) -> Result<Expr> {
         if self.consume(kwd!("lambda")) {
             self.expect(sym!("("))?;
-            let ident = self.expect_ident()?;
-            let ty = if self.consume(sym!(":")) {
-                Some(self.parse_ty()?)
-            } else {
-                None
-            };
+            let idents = self.ident_and_opt_types()?;
             self.expect(sym!(")"))?;
             self.expect(sym!("{"))?;
             let prog = self.prog()?;
             self.expect(sym!("}"))?;
-            Ok(Expr::lambda(ident, ty, prog))
+            let mut ret = prog;
+            for (ident, ty) in idents.into_iter().rev() {
+                ret = Expr::lambda(ident, ty, ret);
+            }
+            Ok(ret)
         } else if self.consume(sym!("(")) {
             let exp = self.expr();
             self.expect(sym!(")"))?;
@@ -317,10 +340,18 @@ impl Parser {
 
     fn app(&mut self) -> Result<Expr> {
         let mut ret = self.primary()?;
-        while self.consume(sym!("(".to_owned())) {
+        if self.consume(sym!("(")) {
             let var = self.expr()?;
-            self.expect(sym!(")".to_owned()))?;
-            ret = Expr::app(ret, var)
+            ret = Expr::app(ret, var);
+            loop {
+                if self.consume(sym!(",")) {
+                    let var = self.expr()?;
+                    ret = Expr::app(ret, var);
+                } else {
+                    break;
+                }
+            }
+            self.expect(sym!(")"))?;
         }
         Ok(ret)
     }
