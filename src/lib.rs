@@ -7,6 +7,7 @@ mod environment;
 mod eval;
 mod expression;
 mod internal_value;
+mod kinds;
 mod parse;
 mod tokenize;
 mod type_infer;

@@ -68,8 +68,8 @@ impl TypeInfer {
 
     pub fn infer_type(&mut self, ast: &Expr) -> Result<Type> {
         match &ast {
-            Expr::Int(_) => Ok(Type::Int),
-            Expr::Bool(_) => Ok(Type::Bool),
+            Expr::Int(_) => Ok(Type::constant("int")),
+            Expr::Bool(_) => Ok(Type::constant("bool")),
             Expr::Variable(name) => {
                 let actual_type = self.env.borrow().get(name.clone())?;
                 Ok(self.instantiate(&actual_type))
@@ -86,36 +86,36 @@ impl TypeInfer {
                 "+" | "-" | "*" | "/" => {
                     let t1 = self.infer_type(&exp1)?;
                     let t2 = self.infer_type(&exp2)?;
-                    Self::unify(&t1, &Type::Int)?;
-                    Self::unify(&t2, &Type::Int)?;
-                    Ok(Type::Int)
+                    Self::unify(&t1, &Type::constant("int"))?;
+                    Self::unify(&t2, &Type::constant("int"))?;
+                    Ok(Type::constant("int"))
                 }
                 "==" | "!=" | "<" | ">" | "<=" | ">=" => {
                     let t1 = self.infer_type(&exp1)?;
                     let t2 = self.infer_type(&exp2)?;
-                    Self::unify(&t1, &Type::Int)?;
-                    Self::unify(&t2, &Type::Int)?;
-                    Ok(Type::Bool)
+                    Self::unify(&t1, &Type::constant("int"))?;
+                    Self::unify(&t2, &Type::constant("int"))?;
+                    Ok(Type::constant("bool"))
                 }
                 "&&" | "||" => {
                     let t1 = self.infer_type(&exp1)?;
                     let t2 = self.infer_type(&exp2)?;
-                    Self::unify(&t1, &Type::Bool)?;
-                    Self::unify(&t2, &Type::Bool)?;
-                    Ok(Type::Bool)
+                    Self::unify(&t1, &Type::constant("bool"))?;
+                    Self::unify(&t2, &Type::constant("bool"))?;
+                    Ok(Type::constant("bool"))
                 }
                 _ => bail!("invalid operator: {}", op),
             },
             Expr::UnaryOp(op, expr) => match op.as_str() {
                 "-" => {
                     let t1 = self.infer_type(&expr)?;
-                    Self::unify(&t1, &Type::Int)?;
-                    Ok(Type::Int)
+                    Self::unify(&t1, &Type::constant("int"))?;
+                    Ok(Type::constant("int"))
                 }
                 "!" => {
                     let t1 = self.infer_type(&expr)?;
-                    Self::unify(&t1, &Type::Bool)?;
-                    Ok(Type::Bool)
+                    Self::unify(&t1, &Type::constant("bool"))?;
+                    Ok(Type::constant("bool"))
                 }
                 _ => bail!("invalid operator: {}", op),
             },
@@ -123,7 +123,7 @@ impl TypeInfer {
                 let t0 = self.infer_type(&cond)?;
                 let t1 = self.infer_type(&exp1)?;
                 let t2 = self.infer_type(&exp2)?;
-                Self::unify(&t0, &Type::Bool)?;
+                Self::unify(&t0, &Type::constant("bool"))?;
                 Self::unify(&t1, &t2)?;
                 Ok(t1)
             }
@@ -174,8 +174,7 @@ impl TypeInfer {
     // 単一化 - ”型のつじつま合わせ”
     fn unify(t1: &Type, t2: &Type) -> Result<()> {
         match (Self::zonk(t1), Self::zonk(t2)) {
-            (Type::Bool, Type::Bool) => Ok(()),
-            (Type::Int, Type::Int) => Ok(()),
+            (Type::Constant(c1), Type::Constant(c2)) if c1 == c2 => Ok(()),
             (Type::Func(arg1, ret1), Type::Func(arg2, ret2)) => {
                 Self::unify(&arg1, &arg2)?;
                 Self::unify(&ret1, &ret2)
@@ -199,8 +198,7 @@ impl TypeInfer {
     // 型変数の出現チェック
     fn occur(n: &u64, t: &Type) -> bool {
         match Self::zonk(t) {
-            Type::Int => false,
-            Type::Bool => false,
+            Type::Constant(_) => false,
             Type::Func(arg, ret) => Self::occur(n, &arg) || Self::occur(n, &ret),
             Type::TypeVar(m, t1) => {
                 if *n == m {
@@ -219,8 +217,7 @@ impl TypeInfer {
     // zonking - 確定した型変数を引きはがす
     fn zonk(t: &Type) -> Type {
         match t {
-            Type::Int => Type::Int,
-            Type::Bool => Type::Bool,
+            Type::Constant(s) => Type::Constant(s.clone()),
             Type::Func(arg, ret) => Type::func(Self::zonk(arg), Self::zonk(ret)),
             Type::TypeVar(_, t1) => match *(*t1).borrow() {
                 Some(ref t1) => Self::zonk(t1),
@@ -233,8 +230,7 @@ impl TypeInfer {
     // 一般化 - 推論されなかった型変数を量化
     fn generalize(&self, t: &Type) {
         match Self::zonk(t) {
-            Type::Int => (),
-            Type::Bool => (),
+            Type::Constant(_) => (),
             Type::Func(arg, ret) => {
                 self.generalize(&*arg);
                 self.generalize(&*ret);
@@ -260,8 +256,7 @@ impl TypeInfer {
                     ty
                 }
             },
-            Type::Int => Type::Int,
-            Type::Bool => Type::Bool,
+            Type::Constant(s) => Type::Constant(s.clone()),
             Type::Func(t1, t2) => Type::func(self.inst_inner(*t1, map), self.inst_inner(*t2, map)),
             Type::TypeVar(_, _) => ty,
         }

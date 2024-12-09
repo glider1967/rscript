@@ -8,33 +8,34 @@ mod environment;
 mod eval;
 mod expression;
 mod internal_value;
+mod kinds;
 mod parse;
 mod tokenize;
 mod type_infer;
 mod types;
 
 fn main() -> Result<()> {
-    // let stmt = Parser::new(
-    //     r#"
-    //     let w = true;
-    //     let f: (int -> int) -> int -> int = lambda (w) {
-    //         lambda(x) {
-    //             x
-    //         }
-    //     };
-    //     f
-    //     "#,
-    // )
-    // .prog()
-    // .context("Parse Error")?;
-    // dbg!(&stmt.to_string());
+    let stmt = Parser::new(
+        r#"
+        let w = true;
+        let f = lambda (w) {
+            lambda(x) {
+                w(w(x))
+            }
+        };
+        f
+        "#,
+    )
+    .prog()
+    .context("Parse Error")?;
+    dbg!(&stmt.to_string());
 
-    // dbg!(TypeInfer::new().infer_type(&stmt))?;
+    dbg!(TypeInfer::new().infer_type(&stmt))?;
 
-    // dbg!(Eval::new()
-    //     .eval(&stmt)
-    //     .context("Evaluation Error")?
-    //     .to_string());
+    dbg!(Eval::new()
+        .eval(&stmt)
+        .context("Evaluation Error")?
+        .to_string());
 
     let stmt = Parser::new(
         r#"

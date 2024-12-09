@@ -376,9 +376,9 @@ impl Parser {
         } else {
             if let Some(Token::Type(val)) = self.tokens.pop() {
                 if &val == "int" {
-                    Ok(Type::Int)
+                    Ok(Type::constant(&val))
                 } else if &val == "bool" {
-                    Ok(Type::Bool)
+                    Ok(Type::constant(&val))
                 } else {
                     bail!("unexpected type: {val}")
                 }
