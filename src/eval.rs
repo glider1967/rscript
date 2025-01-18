@@ -88,7 +88,12 @@ impl Eval {
             }
             Expr::Assign(name, _, expr) => {
                 let val = self.eval(&expr)?;
-                self.env.borrow_mut().set(name, val.clone());
+                self.env.borrow_mut().set_new(name, val.clone())?;
+                Ok(val)
+            }
+            Expr::Reassign(name, expr) => {
+                let val = self.eval(&expr)?;
+                self.env.borrow_mut().set_dup(name, val.clone())?;
                 Ok(val)
             }
             Expr::Lambda(var, _, expr) => {
@@ -98,7 +103,10 @@ impl Eval {
             Expr::App(fun, var) => {
                 if let Value::Lambda(arg, expr, env) = self.eval(&fun)? {
                     let inner_eval = Eval::with_env(env);
-                    inner_eval.env.borrow_mut().set(&arg, self.eval(&var)?);
+                    inner_eval
+                        .env
+                        .borrow_mut()
+                        .set_new(&arg, self.eval(&var)?)?;
                     inner_eval.eval(&expr)
                 } else {
                     bail!("eval error: application to non-lambda!")

@@ -8,7 +8,6 @@ mod environment;
 mod eval;
 mod expression;
 mod internal_value;
-mod kinds;
 mod parse;
 mod tokenize;
 mod type_infer;
@@ -17,11 +16,12 @@ mod types;
 fn main() -> Result<()> {
     let stmt = Parser::new(
         r#"
-        let w = true;
+        let w = 5;
+        mut w = 7;
         let f = lambda (w, x) {
             w(w(x))
         };
-        f
+        w
         "#,
     )
     .prog()

@@ -18,7 +18,7 @@ impl<'a> Tokenizer<'a> {
 
     pub fn tokenize(&self) -> Vec<Token> {
         let parens: &str = "(){}[]";
-        let keywords: Vec<&str> = vec!["true", "false", "if", "else", "let", "lambda"];
+        let keywords: Vec<&str> = vec!["true", "false", "if", "else", "let", "mut", "lambda"];
         let types: Vec<&str> = vec!["int", "bool"];
 
         let mut ret = vec![];

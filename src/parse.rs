@@ -358,17 +358,27 @@ impl Parser {
 
     pub fn prog(&mut self) -> Result<Expr> {
         let mut prog = vec![];
-        while self.consume(kwd!("let")) {
-            let ident = self.expect_ident()?;
-            let ty = if self.consume(sym!(":")) {
-                Some(self.parse_ty()?)
+        loop {
+            if self.consume(kwd!("let")) {
+                let ident = self.expect_ident()?;
+                let ty = if self.consume(sym!(":")) {
+                    Some(self.parse_ty()?)
+                } else {
+                    None
+                };
+                self.expect(sym!("="))?;
+                let expr = self.expr()?;
+                self.expect(sym!(";"))?;
+                prog.push(Expr::assign(ident, ty, expr));
+            } else if self.consume(kwd!("mut")) {
+                let ident = self.expect_ident()?;
+                self.expect(sym!("="))?;
+                let expr = self.expr()?;
+                self.expect(sym!(";"))?;
+                prog.push(Expr::reassign(ident, expr));
             } else {
-                None
-            };
-            self.expect(sym!("="))?;
-            let expr = self.expr()?;
-            self.expect(sym!(";"))?;
-            prog.push(Expr::assign(ident, ty, expr));
+                break;
+            }
         }
 
         let ret = self.expr()?;

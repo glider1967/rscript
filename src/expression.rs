@@ -12,6 +12,7 @@ pub enum Expr {
     UnaryOp(String, Box<Expr>),
     If(Box<Expr>, Box<Expr>, Box<Expr>),
     Assign(String, Option<Type>, Box<Expr>),
+    Reassign(String, Box<Expr>),
     Lambda(String, Option<Type>, Box<Expr>),
     App(Box<Expr>, Box<Expr>),
 }
@@ -31,6 +32,10 @@ impl Expr {
 
     pub fn assign(name: String, ty: Option<Type>, expr: Expr) -> Self {
         Expr::Assign(name, ty, Box::new(expr))
+    }
+
+    pub fn reassign(name: String, expr: Expr) -> Self {
+        Expr::Reassign(name, Box::new(expr))
     }
 
     pub fn binop(name: String, exp1: Expr, exp2: Expr) -> Self {
@@ -85,6 +90,9 @@ impl fmt::Display for Expr {
                     "?".to_string()
                 };
                 write!(f, "let {ident}: {tt} = {expr};")
+            }
+            Expr::Reassign(ident, expr) => {
+                write!(f, "mut {ident} = {expr};")
             }
             Expr::Lambda(var, ty, expr) => {
                 let tt = if ty.is_some() {

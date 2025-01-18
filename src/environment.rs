@@ -37,7 +37,19 @@ impl Env {
         }
     }
 
-    pub fn set(&mut self, name: &str, val: Value) {
+    pub fn set_new(&mut self, name: &str, val: Value) -> Result<()> {
+        if self.env.contains_key(name) {
+            bail!("attempt to define duplicate variable: {name}");
+        }
         self.env.insert(name.to_string(), val);
+        Ok(())
+    }
+
+    pub fn set_dup(&mut self, name: &str, val: Value) -> Result<()> {
+        if !self.env.contains_key(name) {
+            bail!("attempt to set undefined variable: {name}");
+        }
+        self.env.insert(name.to_string(), val);
+        Ok(())
     }
 }

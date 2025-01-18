@@ -67,7 +67,7 @@ impl TypeInfer {
     }
 
     pub fn infer_type(&mut self, ast: &Expr) -> Result<Type> {
-        match &ast {
+        match ast {
             Expr::Int(_) => Ok(Type::constant("int")),
             Expr::Bool(_) => Ok(Type::constant("bool")),
             Expr::Variable(name) => {
@@ -142,6 +142,13 @@ impl TypeInfer {
                 Self::unify(&nty, &actual)?;
                 self.generalize(&actual);
                 self.env.borrow_mut().set(ident.clone(), actual.clone());
+                Ok(actual)
+            }
+            Expr::Reassign(ident, expr) => {
+                let already = self.env.borrow().get(ident.clone())?;
+                let actual = self.infer_type(&expr)?;
+
+                Self::unify(&already, &actual)?;
                 Ok(actual)
             }
             Expr::Lambda(var, ty, expr) => {
