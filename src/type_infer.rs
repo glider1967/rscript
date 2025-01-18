@@ -1,11 +1,22 @@
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use anyhow::{bail, Result};
+use thiserror::Error;
 
 use crate::{
-    expression::{Expr, SpannedExpr},
+    expression::{Expr, ExprSpan, SpannedExpr},
     types::Type,
 };
+
+#[derive(Error, Debug)]
+pub enum TypeInferError {
+    #[error("at {span}: connot unify {ty1} and {ty2}")]
+    UnificationError {
+        ty1: String,
+        ty2: String,
+        span: ExprSpan,
+    },
+}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TypeEnv {
@@ -90,22 +101,22 @@ impl TypeInfer {
                 "+" | "-" | "*" | "/" => {
                     let t1 = self.infer_type(&exp1)?;
                     let t2 = self.infer_type(&exp2)?;
-                    Self::unify(&t1, &Type::constant("int"))?;
-                    Self::unify(&t2, &Type::constant("int"))?;
+                    Self::unify_int(&t1, &exp1)?;
+                    Self::unify_int(&t2, &exp2)?;
                     Ok(Type::constant("int"))
                 }
                 "==" | "!=" | "<" | ">" | "<=" | ">=" => {
                     let t1 = self.infer_type(&exp1)?;
                     let t2 = self.infer_type(&exp2)?;
-                    Self::unify(&t1, &Type::constant("int"))?;
-                    Self::unify(&t2, &Type::constant("int"))?;
+                    Self::unify_int(&t1, &exp1)?;
+                    Self::unify_int(&t2, &exp2)?;
                     Ok(Type::constant("bool"))
                 }
                 "&&" | "||" => {
                     let t1 = self.infer_type(&exp1)?;
                     let t2 = self.infer_type(&exp2)?;
-                    Self::unify(&t1, &Type::constant("bool"))?;
-                    Self::unify(&t2, &Type::constant("bool"))?;
+                    Self::unify_bool(&t1, &exp1)?;
+                    Self::unify_bool(&t2, &exp2)?;
                     Ok(Type::constant("bool"))
                 }
                 _ => bail!("invalid operator: {}", op),
@@ -113,12 +124,12 @@ impl TypeInfer {
             Expr::UnaryOp(op, expr) => match op.as_str() {
                 "-" => {
                     let t1 = self.infer_type(&expr)?;
-                    Self::unify(&t1, &Type::constant("int"))?;
+                    Self::unify_int(&t1, &expr)?;
                     Ok(Type::constant("int"))
                 }
                 "!" => {
                     let t1 = self.infer_type(&expr)?;
-                    Self::unify(&t1, &Type::constant("bool"))?;
+                    Self::unify_bool(&t1, &expr)?;
                     Ok(Type::constant("bool"))
                 }
                 _ => bail!("invalid operator: {}", op),
@@ -127,8 +138,8 @@ impl TypeInfer {
                 let t0 = self.infer_type(&cond)?;
                 let t1 = self.infer_type(&exp1)?;
                 let t2 = self.infer_type(&exp2)?;
-                Self::unify(&t0, &Type::constant("bool"))?;
-                Self::unify(&t1, &t2)?;
+                Self::unify_bool(&t0, &cond)?;
+                Self::unify_error(&t1, &t2, &ast)?;
                 Ok(t1)
             }
             Expr::Assign(ident, ty, expr) => {
@@ -141,9 +152,9 @@ impl TypeInfer {
                 let actual = self.infer_type(&expr)?;
 
                 if let Some(expected) = ty {
-                    Self::unify(expected, &actual)?;
+                    Self::unify_error(expected, &actual, &expr)?;
                 }
-                Self::unify(&nty, &actual)?;
+                Self::unify_error(&nty, &actual, &ast)?;
                 self.generalize(&actual);
                 self.env.borrow_mut().set(ident.clone(), actual.clone());
                 Ok(actual)
@@ -152,7 +163,7 @@ impl TypeInfer {
                 let already = self.env.borrow().get(ident.clone())?;
                 let actual = self.infer_type(&expr)?;
 
-                Self::unify(&already, &actual)?;
+                Self::unify_error(&already, &actual, &expr)?;
                 Ok(actual)
             }
             Expr::Lambda(var, ty, expr) => {
@@ -167,7 +178,7 @@ impl TypeInfer {
                     .set(var.clone(), nty.clone());
                 let ret_type = new_type_infer.infer_type(&expr)?;
                 if ty.is_some() {
-                    Self::unify(&ty.as_ref().unwrap(), &nty)?;
+                    Self::unify_error(&ty.as_ref().unwrap(), &nty, &ast)?;
                 }
                 self.next_typevar_id = new_type_infer.next_typevar_id;
                 Ok(Type::func(nty, ret_type))
@@ -176,7 +187,7 @@ impl TypeInfer {
                 let fun_type = self.infer_type(&fun)?;
                 let var_type = self.infer_type(&var)?;
                 let nty = self.new_typevar();
-                Self::unify(&fun_type, &Type::func(var_type, nty.clone()))?;
+                Self::unify_error(&fun_type, &Type::func(var_type, nty.clone()), &ast)?;
                 Ok(nty)
             }
         }
@@ -193,7 +204,7 @@ impl TypeInfer {
             (Type::TypeVar(id1, _), Type::TypeVar(id2, _)) if id1 == id2 => Ok(()),
             (Type::TypeVar(id1, t1), t2) => Self::unify_var(&id1, &t1, &t2),
             (t1, Type::TypeVar(id2, t2)) => Self::unify_var(&id2, &t2, &t1),
-            (t1, t2) => bail!("unify error: connot unify {} and {}", t1, t2),
+            _ => bail!("unify error"),
         }
     }
 
@@ -204,6 +215,39 @@ impl TypeInfer {
             *(*tref1).borrow_mut() = Some(ty2.clone());
             Ok(())
         }
+    }
+
+    fn unify_int(ty: &Type, expr: &SpannedExpr) -> Result<()> {
+        Self::unify(&ty, &Type::constant("int")).map_err(|_| {
+            TypeInferError::UnificationError {
+                ty1: ty.to_string(),
+                ty2: "int".to_string(),
+                span: expr.span.clone(),
+            }
+            .into()
+        })
+    }
+
+    fn unify_bool(ty: &Type, expr: &SpannedExpr) -> Result<()> {
+        Self::unify(&ty, &Type::constant("bool")).map_err(|_| {
+            TypeInferError::UnificationError {
+                ty1: ty.to_string(),
+                ty2: "bool".to_string(),
+                span: expr.span.clone(),
+            }
+            .into()
+        })
+    }
+
+    fn unify_error(ty1: &Type, ty2: &Type, expr: &SpannedExpr) -> Result<()> {
+        Self::unify(&ty1, &ty2).map_err(|_| {
+            TypeInferError::UnificationError {
+                ty1: ty1.to_string(),
+                ty2: ty2.to_string(),
+                span: expr.span.clone(),
+            }
+            .into()
+        })
     }
 
     // 型変数の出現チェック

@@ -14,6 +14,16 @@ pub struct ExprSpan {
     pub end: Position,
 }
 
+impl fmt::Display for ExprSpan {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}:{} - {}:{}",
+            self.start.line, self.start.col, self.end.line, self.end.col
+        )
+    }
+}
+
 impl ExprSpan {
     pub fn from_two_span(start: &Span, end: &Span) -> ExprSpan {
         ExprSpan {
