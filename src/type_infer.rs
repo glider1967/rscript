@@ -2,7 +2,10 @@ use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use anyhow::{bail, Result};
 
-use crate::{expression::Expr, types::Type};
+use crate::{
+    expression::{Expr, SpannedExpr},
+    types::Type,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TypeEnv {
@@ -66,8 +69,9 @@ impl TypeInfer {
         ret
     }
 
-    pub fn infer_type(&mut self, ast: &Expr) -> Result<Type> {
-        match ast {
+    pub fn infer_type(&mut self, ast: &SpannedExpr) -> Result<Type> {
+        let expr = &ast.expr;
+        match expr {
             Expr::Int(_) => Ok(Type::constant("int")),
             Expr::Bool(_) => Ok(Type::constant("bool")),
             Expr::Variable(name) => {

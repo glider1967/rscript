@@ -1,12 +1,12 @@
 use core::fmt;
 
-use crate::{environment::Env, expression::Expr};
+use crate::{environment::Env, expression::SpannedExpr};
 
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub enum Value {
     Int(i64),
     Bool(bool),
-    Lambda(String, Box<Expr>, Env),
+    Lambda(String, Box<SpannedExpr>, Env),
 }
 
 impl fmt::Display for Value {

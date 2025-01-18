@@ -2,7 +2,11 @@ use std::{cell::RefCell, rc::Rc};
 
 use anyhow::{bail, Ok, Result};
 
-use crate::{environment::Env, expression::Expr, internal_value::Value};
+use crate::{
+    environment::Env,
+    expression::{Expr, SpannedExpr},
+    internal_value::Value,
+};
 
 pub struct Eval {
     env: Rc<RefCell<Env>>,
@@ -21,8 +25,9 @@ impl Eval {
         }
     }
 
-    pub fn eval(&self, ast: &Expr) -> Result<Value> {
-        match &ast {
+    pub fn eval(&self, ast: &SpannedExpr) -> Result<Value> {
+        let expr = &ast.expr;
+        match expr {
             Expr::Int(v) => Ok(Value::Int(*v)),
             Expr::Bool(v) => Ok(Value::Bool(*v)),
             Expr::Variable(name) => self.env.borrow().get(name),

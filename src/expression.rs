@@ -1,65 +1,145 @@
 use core::fmt;
 
-use crate::types::Type;
+use crate::{tokenize::Span, types::Type};
+
+#[derive(PartialEq, Eq, Debug, Clone, Copy)]
+pub struct Position {
+    pub line: u32,
+    pub col: u32,
+}
+
+#[derive(PartialEq, Eq, Debug, Clone)]
+pub struct ExprSpan {
+    pub start: Position,
+    pub end: Position,
+}
+
+impl ExprSpan {
+    pub fn from_two_span(start: &Span, end: &Span) -> ExprSpan {
+        ExprSpan {
+            start: Position {
+                line: start.line,
+                col: start.start,
+            },
+            end: Position {
+                line: end.line,
+                col: end.end,
+            },
+        }
+    }
+
+    pub fn from_two_exprspan(a: &ExprSpan, b: &ExprSpan) -> ExprSpan {
+        ExprSpan {
+            start: a.start,
+            end: b.end,
+        }
+    }
+
+    pub fn from_span_and_exprspan(a: &Span, b: &ExprSpan) -> ExprSpan {
+        ExprSpan {
+            start: Position {
+                line: a.line,
+                col: a.start,
+            },
+            end: b.end,
+        }
+    }
+
+    pub fn from(span: Span) -> ExprSpan {
+        ExprSpan {
+            start: Position {
+                line: span.line,
+                col: span.start,
+            },
+            end: Position {
+                line: span.line,
+                col: span.end,
+            },
+        }
+    }
+}
+
+#[derive(PartialEq, Eq, Debug, Clone)]
+pub struct SpannedExpr {
+    pub expr: Expr,
+    pub span: ExprSpan,
+}
 
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub enum Expr {
     Int(i64),
     Bool(bool),
     Variable(String),
-    Program(Vec<Expr>, Box<Expr>),
-    BinOp(String, Box<Expr>, Box<Expr>),
-    UnaryOp(String, Box<Expr>),
-    If(Box<Expr>, Box<Expr>, Box<Expr>),
-    Assign(String, Option<Type>, Box<Expr>),
-    Reassign(String, Box<Expr>),
-    Lambda(String, Option<Type>, Box<Expr>),
-    App(Box<Expr>, Box<Expr>),
+    Program(Vec<SpannedExpr>, Box<SpannedExpr>),
+    BinOp(String, Box<SpannedExpr>, Box<SpannedExpr>),
+    UnaryOp(String, Box<SpannedExpr>),
+    If(Box<SpannedExpr>, Box<SpannedExpr>, Box<SpannedExpr>),
+    Assign(String, Option<Type>, Box<SpannedExpr>),
+    Reassign(String, Box<SpannedExpr>),
+    Lambda(String, Option<Type>, Box<SpannedExpr>),
+    App(Box<SpannedExpr>, Box<SpannedExpr>),
 }
 
-impl Expr {
-    pub fn int(num: i64) -> Self {
-        Expr::Int(num)
+impl SpannedExpr {
+    pub fn new(expr: Expr, span: ExprSpan) -> Self {
+        SpannedExpr { expr, span }
     }
 
-    pub fn boolean(b: bool) -> Self {
-        Expr::Bool(b)
+    pub fn int(num: i64, span: Span) -> Self {
+        SpannedExpr::new(Expr::Int(num), ExprSpan::from(span))
     }
 
-    pub fn variable(name: String) -> Self {
-        Expr::Variable(name)
+    pub fn boolean(b: bool, span: Span) -> Self {
+        SpannedExpr::new(Expr::Bool(b), ExprSpan::from(span))
     }
 
-    pub fn assign(name: String, ty: Option<Type>, expr: Expr) -> Self {
-        Expr::Assign(name, ty, Box::new(expr))
+    pub fn variable(name: String, span: Span) -> Self {
+        SpannedExpr::new(Expr::Variable(name), ExprSpan::from(span))
     }
 
-    pub fn reassign(name: String, expr: Expr) -> Self {
-        Expr::Reassign(name, Box::new(expr))
+    pub fn binary_op(op: String, left: SpannedExpr, right: SpannedExpr) -> Self {
+        let span = ExprSpan::from_two_exprspan(&left.span, &right.span);
+        SpannedExpr::new(Expr::BinOp(op, Box::new(left), Box::new(right)), span)
     }
 
-    pub fn binop(name: String, exp1: Expr, exp2: Expr) -> Self {
-        Expr::BinOp(name, Box::new(exp1), Box::new(exp2))
+    pub fn unary_op(op: String, expr: SpannedExpr, span: Span) -> Self {
+        let expr_span = expr.span.clone();
+        SpannedExpr::new(
+            Expr::UnaryOp(op, Box::new(expr)),
+            ExprSpan::from_span_and_exprspan(&span, &expr_span),
+        )
     }
 
-    pub fn unaryop(name: String, expr: Expr) -> Self {
-        Expr::UnaryOp(name, Box::new(expr))
+    pub fn if_expr(
+        cond: SpannedExpr,
+        then: SpannedExpr,
+        else_: SpannedExpr,
+        span: ExprSpan,
+    ) -> Self {
+        SpannedExpr::new(
+            Expr::If(Box::new(cond), Box::new(then), Box::new(else_)),
+            span,
+        )
     }
 
-    pub fn app(fun: Expr, arg: Expr) -> Self {
-        Expr::App(Box::new(fun), Box::new(arg))
+    pub fn assign(name: String, ty: Option<Type>, expr: SpannedExpr, span: ExprSpan) -> Self {
+        SpannedExpr::new(Expr::Assign(name, ty, Box::new(expr)), span)
     }
 
-    pub fn if_expr(cond: Expr, expr: Expr, elseexp: Expr) -> Self {
-        Expr::If(Box::new(cond), Box::new(expr), Box::new(elseexp))
+    pub fn reassign(name: String, expr: SpannedExpr, span: ExprSpan) -> Self {
+        SpannedExpr::new(Expr::Reassign(name, Box::new(expr)), span)
     }
 
-    pub fn lambda(name: String, argty: Option<Type>, expr: Expr) -> Self {
-        Expr::Lambda(name, argty, Box::new(expr))
+    pub fn lambda(param: String, ty: Option<Type>, body: SpannedExpr, span: ExprSpan) -> Self {
+        SpannedExpr::new(Expr::Lambda(param, ty, Box::new(body)), span)
     }
 
-    pub fn program(prog: Vec<Expr>, ret: Expr) -> Self {
-        Expr::Program(prog, Box::new(ret))
+    pub fn app(func: SpannedExpr, arg: SpannedExpr, span: ExprSpan) -> Self {
+        SpannedExpr::new(Expr::App(Box::new(func), Box::new(arg)), span)
+    }
+
+    pub fn program(exprs: Vec<SpannedExpr>, last: SpannedExpr, span: ExprSpan) -> Self {
+        SpannedExpr::new(Expr::Program(exprs, Box::new(last)), span)
     }
 }
 
@@ -106,5 +186,12 @@ impl fmt::Display for Expr {
                 write!(f, "{fun}({var})")
             }
         }
+    }
+}
+
+impl fmt::Display for SpannedExpr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let expr = &self.expr;
+        write!(f, "{expr}")
     }
 }

@@ -1,5 +1,5 @@
 use crate::{
-    expression::Expr,
+    expression::{ExprSpan, SpannedExpr},
     tokenize::{Span, Token, TokenType, Tokenizer},
     types::Type,
 };
@@ -37,6 +37,11 @@ pub enum ParseError {
         span: Option<Span>,
     },
 }
+#[derive(Debug)]
+struct TokenInfo<T> {
+    value: T,
+    span: Span,
+}
 
 pub struct Parser {
     tokens: Vec<Token>,
@@ -65,67 +70,39 @@ impl Parser {
         }
     }
 
-    fn consume(&mut self, ttype: TokenType) -> bool {
-        if let Some(t) = self.tokens.last() {
-            if t.ttype == ttype {
-                let _ = self.tokens.pop();
-                true
-            } else {
-                false
-            }
-        } else {
-            false
-        }
-    }
-
-    fn expect(&mut self, ttype: TokenType) -> Result<()> {
-        if let Some(t) = self.tokens.pop() {
-            if t.ttype != ttype {
-                Err(ParseError::UnexpectedToken {
-                    expected: ttype,
-                    found: Some(t.ttype),
-                    span: Some(t.span),
-                }
-                .into())
-            } else {
-                Ok(())
-            }
-        } else {
-            Err(ParseError::UnexpectedToken {
-                expected: ttype,
-                found: None,
-                span: None,
-            }
-            .into())
-        }
-    }
-
-    fn consume_int(&mut self) -> Option<i64> {
+    fn consume_int(&mut self) -> Option<TokenInfo<i64>> {
         if let Some(Token {
             ttype: TokenType::Int(val),
-            span: _,
+            span,
         }) = self.tokens.last()
         {
-            let r = Some(*val);
-            let _ = self.tokens.pop();
-            r
+            let span = span.clone();
+            let val = *val;
+            self.tokens.pop();
+            Some(TokenInfo {
+                value: val,
+                span: span,
+            })
         } else {
             None
         }
     }
 
-    fn consume_bool(&mut self) -> Option<bool> {
+    fn consume_bool(&mut self) -> Option<TokenInfo<bool>> {
         if let Some(Token {
             ttype: TokenType::Keyword(val),
-            span: _,
+            span,
         }) = self.tokens.last()
         {
-            if *val == "true" {
-                let _ = self.tokens.pop();
-                Some(true)
-            } else if *val == "false" {
-                let _ = self.tokens.pop();
-                Some(false)
+            let is_bool = val == "true" || val == "false";
+            if is_bool {
+                let span = span.clone();
+                let val = val == "true";
+                self.tokens.pop();
+                Some(TokenInfo {
+                    value: val,
+                    span: span,
+                })
             } else {
                 None
             }
@@ -134,15 +111,54 @@ impl Parser {
         }
     }
 
-    fn consume_ident(&mut self) -> Option<String> {
+    fn consume_ident(&mut self) -> Option<TokenInfo<String>> {
         if let Some(Token {
             ttype: TokenType::Ident(val),
-            span: _,
+            span,
         }) = self.tokens.last()
         {
-            let r = Some(val.clone());
-            let _ = self.tokens.pop();
-            r
+            let span = span.clone();
+            let val = val.clone();
+            self.tokens.pop();
+            Some(TokenInfo {
+                value: val,
+                span: span,
+            })
+        } else {
+            None
+        }
+    }
+
+    fn expect(&mut self, expected: TokenType) -> Result<Token> {
+        if let Some(t) = self.tokens.pop() {
+            if t.ttype != expected {
+                Err(ParseError::UnexpectedToken {
+                    expected,
+                    found: Some(t.ttype),
+                    span: Some(t.span),
+                }
+                .into())
+            } else {
+                Ok(t)
+            }
+        } else {
+            Err(ParseError::UnexpectedToken {
+                expected,
+                found: None,
+                span: None,
+            }
+            .into())
+        }
+    }
+
+    fn consume(&mut self, ttype: TokenType) -> Option<Span> {
+        if let Some(t) = self.tokens.last() {
+            if t.ttype == ttype {
+                let token = self.tokens.pop().unwrap();
+                Some(token.span)
+            } else {
+                None
+            }
         } else {
             None
         }
@@ -167,22 +183,22 @@ impl Parser {
         }
     }
 
-    fn expr(&mut self) -> Result<Expr> {
+    fn expr(&mut self) -> Result<SpannedExpr> {
         self.parse_if()
     }
 
     fn ident_and_opt_types(&mut self) -> Result<Vec<(String, Option<Type>)>> {
         let ident = self.expect_ident()?;
-        let ty = if self.consume(sym!(":")) {
+        let ty = if let Some(_) = self.consume(sym!(":")) {
             Some(self.parse_ty()?)
         } else {
             None
         };
         let mut list = vec![(ident, ty)];
         loop {
-            if self.consume(sym!(",")) {
+            if let Some(_) = self.consume(sym!(",")) {
                 let ident = self.expect_ident()?;
-                let ty = if self.consume(sym!(":")) {
+                let ty = if let Some(_) = self.consume(sym!(":")) {
                     Some(self.parse_ty()?)
                 } else {
                     None
@@ -195,29 +211,39 @@ impl Parser {
         Ok(list)
     }
 
-    fn primary(&mut self) -> Result<Expr> {
-        if self.consume(kwd!("lambda")) {
+    fn primary(&mut self) -> Result<SpannedExpr> {
+        if let Some(start_span) = self.consume(kwd!("lambda")) {
             self.expect(sym!("("))?;
             let idents = self.ident_and_opt_types()?;
             self.expect(sym!(")"))?;
             self.expect(sym!("{"))?;
             let prog = self.prog()?;
-            self.expect(sym!("}"))?;
+            let end_token = self.expect(sym!("}"))?;
+
             let mut ret = prog;
             for (ident, ty) in idents.into_iter().rev() {
-                ret = Expr::lambda(ident, ty, ret);
+                let ret_span = ret.span.clone();
+                ret = SpannedExpr::lambda(ident, ty, ret, ret_span);
             }
-            Ok(ret)
-        } else if self.consume(sym!("(")) {
-            let exp = self.expr();
-            self.expect(sym!(")"))?;
-            exp
-        } else if let Some(num) = self.consume_int() {
-            Ok(Expr::int(num))
-        } else if let Some(b) = self.consume_bool() {
-            Ok(Expr::boolean(b))
-        } else if let Some(name) = self.consume_ident() {
-            Ok(Expr::variable(name))
+
+            Ok(SpannedExpr::new(
+                ret.expr,
+                ExprSpan::from_two_span(&start_span, &end_token.span),
+            ))
+        } else if let Some(start_span) = self.consume(sym!("(")) {
+            let exp = self.expr()?;
+            let end_token = self.expect(sym!(")"))?;
+
+            Ok(SpannedExpr::new(
+                exp.expr,
+                ExprSpan::from_two_span(&start_span, &end_token.span),
+            ))
+        } else if let Some(token) = self.consume_int() {
+            Ok(SpannedExpr::int(token.value, token.span))
+        } else if let Some(token) = self.consume_bool() {
+            Ok(SpannedExpr::boolean(token.value, token.span))
+        } else if let Some(token) = self.consume_ident() {
+            Ok(SpannedExpr::variable(token.value, token.span))
         } else {
             if let Some(tok) = self.tokens.pop() {
                 Err(ParseError::ExpectedPrimaryToken {
@@ -235,8 +261,8 @@ impl Parser {
         }
     }
 
-    fn parse_if(&mut self) -> Result<Expr> {
-        if self.consume(kwd!("if")) {
+    fn parse_if(&mut self) -> Result<SpannedExpr> {
+        if let Some(start_span) = self.consume(kwd!("if")) {
             self.expect(sym!("("))?;
             let cond = self.or()?;
             self.expect(sym!(")"))?;
@@ -246,68 +272,73 @@ impl Parser {
             self.expect(kwd!("else"))?;
             self.expect(sym!("{"))?;
             let exp2 = self.or()?;
-            self.expect(sym!("}"))?;
-            Ok(Expr::if_expr(cond, exp1, exp2))
+            let end_token = self.expect(sym!("}"))?;
+            Ok(SpannedExpr::if_expr(
+                cond,
+                exp1,
+                exp2,
+                ExprSpan::from_two_span(&start_span, &end_token.span),
+            ))
         } else {
             self.or()
         }
     }
 
-    fn or(&mut self) -> Result<Expr> {
+    fn or(&mut self) -> Result<SpannedExpr> {
         let mut ret = self.and()?;
         loop {
-            if self.consume(sym!("||")) {
+            if let Some(_) = self.consume(sym!("||")) {
                 let exp = self.and()?;
-                ret = Expr::binop("||".into(), ret, exp);
+                ret = SpannedExpr::binary_op("||".into(), ret, exp);
             } else {
                 return Ok(ret);
             }
         }
     }
 
-    fn and(&mut self) -> Result<Expr> {
+    fn and(&mut self) -> Result<SpannedExpr> {
         let mut ret = self.equ()?;
         loop {
-            if self.consume(sym!("&&")) {
+            if let Some(_) = self.consume(sym!("&&")) {
                 let exp = self.equ()?;
-                ret = Expr::binop("&&".into(), ret, exp);
+                ret = SpannedExpr::binary_op("&&".into(), ret, exp);
             } else {
                 return Ok(ret);
             }
         }
     }
 
-    fn equ(&mut self) -> Result<Expr> {
+    fn equ(&mut self) -> Result<SpannedExpr> {
         let mut ret = self.rel()?;
         let mut now;
         let mut prev;
 
-        if self.consume(sym!("==")) {
+        if let Some(_) = self.consume(sym!("==")) {
             now = self.rel()?.clone();
-            ret = Expr::binop("==".to_owned(), ret, now.clone());
-        } else if self.consume(sym!("!=".to_owned())) {
+            ret = SpannedExpr::binary_op("==".to_owned(), ret, now.clone());
+        } else if let Some(_) = self.consume(sym!("!=".to_owned())) {
             now = self.rel()?.clone();
-            ret = Expr::binop("!=".into(), ret, now.clone());
+            ret = SpannedExpr::binary_op("!=".into(), ret, now.clone());
         } else {
             return Ok(ret);
         }
 
         loop {
-            if self.consume(sym!("==")) {
+            if let Some(_) = self.consume(sym!("==")) {
                 prev = now;
                 now = self.rel()?.clone();
-                ret = Expr::binop(
+                ret = SpannedExpr::binary_op(
                     "==".into(),
                     ret,
-                    Expr::binop("==".into(), prev.clone(), now.clone()),
+                    SpannedExpr::binary_op("==".into(), prev.clone(), now.clone()),
                 );
-            } else if self.consume(sym!("!=")) {
+            } else if let Some(_) = self.consume(sym!("!=")) {
                 prev = now;
                 now = self.rel()?.clone();
-                ret = Expr::binop(
+                ret = SpannedExpr::binary_op(
                     "!=".into(),
                     ret,
-                    Expr::binop("!=".into(), prev.clone(), now.clone()),
+                    SpannedExpr::binary_op("!=".into(), prev.clone(), now.clone()),
                 );
             } else {
                 return Ok(ret);
@@ -315,115 +346,105 @@ impl Parser {
         }
     }
 
-    fn rel(&mut self) -> Result<Expr> {
+    fn rel(&mut self) -> Result<SpannedExpr> {
         let mut ret = self.add()?;
-        let mut now;
-        let mut prev;
+        let mut now: SpannedExpr;
+        let mut prev: SpannedExpr;
 
-        if self.consume(sym!("<")) {
-            now = self.add()?.clone();
-            ret = Expr::binop("<".into(), ret, now.clone());
-        } else if self.consume(sym!(">")) {
-            now = self.add()?.clone();
-            ret = Expr::binop(">".into(), ret, now.clone());
-        } else if self.consume(sym!("<=")) {
-            now = self.add()?.clone();
-            ret = Expr::binop("<=".into(), ret, now.clone());
-        } else if self.consume(sym!(">=")) {
-            now = self.add()?.clone();
-            ret = Expr::binop(">=".into(), ret, now.clone());
+        if let Some(_) = self.consume(sym!("<")) {
+            now = self.add()?;
+            ret = SpannedExpr::binary_op("<".into(), ret, now.clone());
+        } else if let Some(_) = self.consume(sym!(">")) {
+            now = self.add()?;
+            ret = SpannedExpr::binary_op(">".into(), ret, now.clone());
+        } else if let Some(_) = self.consume(sym!("<=")) {
+            now = self.add()?;
+            ret = SpannedExpr::binary_op("<=".into(), ret, now.clone());
+        } else if let Some(_) = self.consume(sym!(">=")) {
+            now = self.add()?;
+            ret = SpannedExpr::binary_op(">=".into(), ret, now.clone());
         } else {
             return Ok(ret);
         }
 
         loop {
-            if self.consume(sym!("<")) {
+            if let Some(_) = self.consume(sym!("<")) {
                 prev = now;
-                now = self.add()?.clone();
-                ret = Expr::binop(
-                    "<".into(),
-                    ret,
-                    Expr::binop("<".into(), prev.clone(), now.clone()),
-                );
-            } else if self.consume(sym!(">")) {
+                now = self.add()?;
+                let inner_op = SpannedExpr::binary_op("<".into(), prev.clone(), now.clone());
+                ret = SpannedExpr::binary_op("<".into(), ret.clone(), inner_op);
+            } else if let Some(_) = self.consume(sym!(">")) {
                 prev = now;
-                now = self.add()?.clone();
-                ret = Expr::binop(
-                    ">".into(),
-                    ret,
-                    Expr::binop(">".into(), prev.clone(), now.clone()),
-                );
-            } else if self.consume(sym!("<=")) {
+                now = self.add()?;
+                let inner_op = SpannedExpr::binary_op(">".into(), prev.clone(), now.clone());
+                ret = SpannedExpr::binary_op(">".into(), ret.clone(), inner_op);
+            } else if let Some(_) = self.consume(sym!("<=")) {
                 prev = now;
-                now = self.add()?.clone();
-                ret = Expr::binop(
-                    "<=".into(),
-                    ret,
-                    Expr::binop("<=".into(), prev.clone(), now.clone()),
-                );
-            } else if self.consume(sym!(">=")) {
+                now = self.add()?;
+                let inner_op = SpannedExpr::binary_op("<=".into(), prev.clone(), now.clone());
+                ret = SpannedExpr::binary_op("<=".into(), ret.clone(), inner_op);
+            } else if let Some(_) = self.consume(sym!(">=")) {
                 prev = now;
-                now = self.add()?.clone();
-                ret = Expr::binop(
-                    ">=".into(),
-                    ret,
-                    Expr::binop(">=".into(), prev.clone(), now.clone()),
-                );
+                now = self.add()?;
+                let inner_op = SpannedExpr::binary_op(">=".into(), prev.clone(), now.clone());
+                ret = SpannedExpr::binary_op(">=".into(), ret.clone(), inner_op);
             } else {
                 return Ok(ret);
             }
         }
     }
 
-    fn add(&mut self) -> Result<Expr> {
+    fn add(&mut self) -> Result<SpannedExpr> {
         let mut ret = self.mul()?;
         loop {
-            if self.consume(sym!("+")) {
+            if let Some(_) = self.consume(sym!("+")) {
                 let exp = self.mul()?;
-                ret = Expr::binop("+".to_owned(), ret, exp);
-            } else if self.consume(sym!("-")) {
+                ret = SpannedExpr::binary_op("+".to_owned(), ret, exp);
+            } else if let Some(_) = self.consume(sym!("-")) {
                 let exp = self.mul()?;
-                ret = Expr::binop("-".to_owned(), ret, exp);
+                ret = SpannedExpr::binary_op("-".to_owned(), ret, exp);
             } else {
                 return Ok(ret);
             }
         }
     }
 
-    fn mul(&mut self) -> Result<Expr> {
+    fn mul(&mut self) -> Result<SpannedExpr> {
         let mut ret = self.unary()?;
         loop {
-            if self.consume(sym!("*")) {
+            if let Some(_) = self.consume(sym!("*")) {
                 let exp = self.unary()?;
-                ret = Expr::binop("*".to_owned(), ret, exp);
-            } else if self.consume(sym!("/")) {
+                ret = SpannedExpr::binary_op("*".to_owned(), ret, exp);
+            } else if let Some(_) = self.consume(sym!("/")) {
                 let exp = self.unary()?;
-                ret = Expr::binop("/".to_owned(), ret, exp);
+                ret = SpannedExpr::binary_op("/".to_owned(), ret, exp);
             } else {
                 return Ok(ret);
             }
         }
     }
 
-    fn unary(&mut self) -> Result<Expr> {
-        if self.consume(sym!("-")) {
-            Ok(Expr::unaryop("-".into(), self.app()?))
-        } else if self.consume(sym!("!")) {
-            Ok(Expr::unaryop("!".into(), self.app()?))
+    fn unary(&mut self) -> Result<SpannedExpr> {
+        if let Some(sp) = self.consume(sym!("-")) {
+            Ok(SpannedExpr::unary_op("-".into(), self.app()?, sp))
+        } else if let Some(sp) = self.consume(sym!("!")) {
+            Ok(SpannedExpr::unary_op("!".into(), self.app()?, sp))
         } else {
             Ok(self.app()?)
         }
     }
 
-    fn app(&mut self) -> Result<Expr> {
+    fn app(&mut self) -> Result<SpannedExpr> {
         let mut ret = self.primary()?;
-        if self.consume(sym!("(")) {
+        if let Some(_) = self.consume(sym!("(")) {
             let var = self.expr()?;
-            ret = Expr::app(ret, var);
+            let span = ExprSpan::from_two_exprspan(&ret.span, &var.span);
+            ret = SpannedExpr::app(ret, var, span);
             loop {
-                if self.consume(sym!(",")) {
+                if let Some(_) = self.consume(sym!(",")) {
                     let var = self.expr()?;
-                    ret = Expr::app(ret, var);
+                    let span = ExprSpan::from_two_exprspan(&ret.span, &var.span);
+                    ret = SpannedExpr::app(ret, var, span);
                 } else {
                     break;
                 }
@@ -433,33 +454,47 @@ impl Parser {
         Ok(ret)
     }
 
-    pub fn prog(&mut self) -> Result<Expr> {
+    pub fn prog(&mut self) -> Result<SpannedExpr> {
         let mut prog = vec![];
         loop {
-            if self.consume(kwd!("let")) {
+            if let Some(start_span) = self.consume(kwd!("let")) {
                 let ident = self.expect_ident()?;
-                let ty = if self.consume(sym!(":")) {
+                let ty = if let Some(_) = self.consume(sym!(":")) {
                     Some(self.parse_ty()?)
                 } else {
                     None
                 };
                 self.expect(sym!("="))?;
                 let expr = self.expr()?;
-                self.expect(sym!(";"))?;
-                prog.push(Expr::assign(ident, ty, expr));
-            } else if self.consume(kwd!("mut")) {
+                let end_token = self.expect(sym!(";"))?;
+                prog.push(SpannedExpr::assign(
+                    ident,
+                    ty,
+                    expr,
+                    ExprSpan::from_two_span(&start_span, &end_token.span),
+                ));
+            } else if let Some(start_span) = self.consume(kwd!("mut")) {
                 let ident = self.expect_ident()?;
                 self.expect(sym!("="))?;
                 let expr = self.expr()?;
-                self.expect(sym!(";"))?;
-                prog.push(Expr::reassign(ident, expr));
+                let end_token = self.expect(sym!(";"))?;
+                prog.push(SpannedExpr::reassign(
+                    ident,
+                    expr,
+                    ExprSpan::from_two_span(&start_span, &end_token.span),
+                ));
             } else {
                 break;
             }
         }
 
         let ret = self.expr()?;
-        Ok(Expr::program(prog, ret))
+        let ret_span = if prog.is_empty() {
+            ret.span.clone()
+        } else {
+            ExprSpan::from_two_exprspan(&prog[0].span, &ret.span)
+        };
+        Ok(SpannedExpr::program(prog, ret, ret_span))
     }
 
     // =====================================================================
@@ -471,7 +506,7 @@ impl Parser {
     fn fntype(&mut self) -> Result<Type> {
         let mut list = vec![self.primary_type()?];
         loop {
-            if self.consume(sym!("->")) {
+            if let Some(_) = self.consume(sym!("->")) {
                 let ty = self.primary_type()?;
                 list.push(ty);
             } else {
@@ -487,7 +522,7 @@ impl Parser {
     }
 
     fn primary_type(&mut self) -> Result<Type> {
-        if self.consume(sym!("(")) {
+        if let Some(_) = self.consume(sym!("(")) {
             let ty = self.parse_ty()?;
             self.expect(sym!(")"))?;
             Ok(ty)
@@ -523,7 +558,7 @@ mod parse {
 
     #[test]
     fn parse_num() {
-        let expr: Expr = Parser::new("233425").expr().unwrap();
+        let expr: Expr = Parser::new("233425").expr().unwrap().expr;
         assert_eq!(expr, Expr::Int(233425),);
     }
 }
