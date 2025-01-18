@@ -1,5 +1,5 @@
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub enum Token {
+pub enum TokenType {
     Int(i64),
     Symbol(String),
     Keyword(String),
@@ -7,16 +7,44 @@ pub enum Token {
     Ident(String),
 }
 
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct Span {
+    pub line: u32,
+    pub start: u32,
+    pub end: u32,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct Token {
+    pub ttype: TokenType,
+    pub span: Span,
+}
+
+impl Token {
+    fn new(ttype: TokenType, line: u32, start: u32, end: u32) -> Token {
+        Token {
+            ttype,
+            span: Span { line, start, end },
+        }
+    }
+}
+
 pub struct Tokenizer<'a> {
     input: &'a str,
+    line: u32,
+    col: u32,
 }
 
 impl<'a> Tokenizer<'a> {
     pub fn new(input: &'a str) -> Self {
-        Self { input }
+        Self {
+            input,
+            line: 0,
+            col: 0,
+        }
     }
 
-    pub fn tokenize(&self) -> Vec<Token> {
+    pub fn tokenize(mut self) -> Vec<Token> {
         let parens: &str = "(){}[]";
         let keywords: Vec<&str> = vec!["true", "false", "if", "else", "let", "mut", "lambda"];
         let types: Vec<&str> = vec!["int", "bool"];
@@ -24,63 +52,98 @@ impl<'a> Tokenizer<'a> {
         let mut ret = vec![];
         let mut program = self.input.chars().peekable();
         while let Some(ch) = program.next() {
+            if ch == '\n' {
+                self.line += 1;
+                self.col = 0;
+            } else {
+                self.col += 1;
+            }
+
+            // 空白をスキップ
             if ch.is_whitespace() {
                 continue;
             }
 
+            // 数字のパース
             if ch.is_ascii_digit() {
                 let mut numstr = ch.to_string();
+                let start_col = self.col;
                 while let Some(numch) = program.peek() {
                     if numch.is_ascii_digit() {
                         numstr.push(*numch);
                         let _ = program.next();
+                        self.col += 1;
                     } else {
                         break;
                     }
                 }
                 let num = numstr.parse::<i64>().unwrap();
-                ret.push(Token::Int(num));
+                ret.push(Token::new(
+                    TokenType::Int(num),
+                    self.line,
+                    start_col,
+                    self.col + 1,
+                ));
                 continue;
             }
 
+            // 記号のパース
             if ch.is_ascii_punctuation() {
                 let mut signs = ch.to_string();
+                let start_col = self.col;
 
+                // カッコ
                 if parens.contains(ch) {
-                    ret.push(Token::Symbol(signs));
+                    ret.push(Token::new(
+                        TokenType::Symbol(signs),
+                        self.line,
+                        start_col,
+                        self.col + 1,
+                    ));
                     continue;
                 }
 
+                // その他演算子
                 while let Some(punctch) = program.peek() {
                     if punctch.is_ascii_punctuation() {
                         signs.push(*punctch);
                         let _ = program.next();
+                        self.col += 1;
                     } else {
                         break;
                     }
                 }
-                ret.push(Token::Symbol(signs));
+                ret.push(Token::new(
+                    TokenType::Symbol(signs),
+                    self.line,
+                    start_col,
+                    self.col + 1,
+                ));
                 continue;
             }
 
+            // 文字のパース
             if ch.is_ascii_alphabetic() {
                 let mut ident = ch.to_string();
+                let start_col = self.col;
                 while let Some(identch) = program.peek() {
                     if identch.is_ascii_alphanumeric() {
                         ident.push(*identch);
                         let _ = program.next();
+                        self.col += 1;
                     } else {
                         break;
                     }
                 }
 
-                if keywords.contains(&ident.as_str()) {
-                    ret.push(Token::Keyword(ident))
+                let ttype = if keywords.contains(&ident.as_str()) {
+                    TokenType::Keyword(ident)
                 } else if types.contains(&ident.as_str()) {
-                    ret.push(Token::Type(ident))
+                    TokenType::Type(ident)
                 } else {
-                    ret.push(Token::Ident(ident));
-                }
+                    TokenType::Ident(ident)
+                };
+                ret.push(Token::new(ttype, self.line, start_col, self.col + 1));
                 continue;
             }
         }

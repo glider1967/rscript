@@ -8,4 +8,5 @@ crate-type = ["cdylib"]
 
 [dependencies]
 anyhow = "1.0.86"
+thiserror = "2.0.11"
 wasm-bindgen = "0.2"

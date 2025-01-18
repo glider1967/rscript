@@ -1,10 +1,42 @@
 use crate::{
     expression::Expr,
-    tokenize::{Token, Tokenizer},
+    tokenize::{Span, Token, TokenType, Tokenizer},
     types::Type,
 };
 
-use anyhow::{bail, Ok, Result};
+use anyhow::{Ok, Result};
+use thiserror::Error;
+
+#[derive(Error, Debug)]
+pub enum ParseError {
+    #[error("at {span:?}: Unexpected token: expected {expected:?}, found {found:?}")]
+    UnexpectedToken {
+        expected: TokenType,
+        found: Option<TokenType>,
+        span: Option<Span>,
+    },
+
+    #[error("at {span:?}: Expected primary token, found {found:?}")]
+    ExpectedPrimaryToken {
+        found: Option<TokenType>,
+        span: Option<Span>,
+    },
+
+    #[error("at {span:?}: Expected identifier, found {found:?}")]
+    ExpectedIdentifier {
+        found: Option<TokenType>,
+        span: Option<Span>,
+    },
+
+    #[error("at {span:?} Invalid type: {found}")]
+    InvalidType { found: String, span: Span },
+
+    #[error("at {span:?} Expected type declaration, found {found:?}")]
+    ExpectedType {
+        found: Option<TokenType>,
+        span: Option<Span>,
+    },
+}
 
 pub struct Parser {
     tokens: Vec<Token>,
@@ -12,12 +44,12 @@ pub struct Parser {
 
 macro_rules! sym {
     ($s:expr) => {
-        Token::Symbol($s.to_string())
+        TokenType::Symbol($s.to_string())
     };
 }
 macro_rules! kwd {
     ($s:expr) => {
-        Token::Keyword($s.to_string())
+        TokenType::Keyword($s.to_string())
     };
 }
 
@@ -33,9 +65,9 @@ impl Parser {
         }
     }
 
-    fn consume(&mut self, token: Token) -> bool {
+    fn consume(&mut self, ttype: TokenType) -> bool {
         if let Some(t) = self.tokens.last() {
-            if *t == token {
+            if t.ttype == ttype {
                 let _ = self.tokens.pop();
                 true
             } else {
@@ -46,20 +78,34 @@ impl Parser {
         }
     }
 
-    fn expect(&mut self, token: Token) -> Result<()> {
+    fn expect(&mut self, ttype: TokenType) -> Result<()> {
         if let Some(t) = self.tokens.pop() {
-            if t != token {
-                bail!("unexpected token: {:?}", t)
+            if t.ttype != ttype {
+                Err(ParseError::UnexpectedToken {
+                    expected: ttype,
+                    found: Some(t.ttype),
+                    span: Some(t.span),
+                }
+                .into())
             } else {
                 Ok(())
             }
         } else {
-            bail!("unexpected EOF")
+            Err(ParseError::UnexpectedToken {
+                expected: ttype,
+                found: None,
+                span: None,
+            }
+            .into())
         }
     }
 
     fn consume_int(&mut self) -> Option<i64> {
-        if let Some(Token::Int(val)) = self.tokens.last() {
+        if let Some(Token {
+            ttype: TokenType::Int(val),
+            span: _,
+        }) = self.tokens.last()
+        {
             let r = Some(*val);
             let _ = self.tokens.pop();
             r
@@ -69,7 +115,11 @@ impl Parser {
     }
 
     fn consume_bool(&mut self) -> Option<bool> {
-        if let Some(Token::Keyword(val)) = self.tokens.last() {
+        if let Some(Token {
+            ttype: TokenType::Keyword(val),
+            span: _,
+        }) = self.tokens.last()
+        {
             if *val == "true" {
                 let _ = self.tokens.pop();
                 Some(true)
@@ -85,7 +135,11 @@ impl Parser {
     }
 
     fn consume_ident(&mut self) -> Option<String> {
-        if let Some(Token::Ident(val)) = self.tokens.last() {
+        if let Some(Token {
+            ttype: TokenType::Ident(val),
+            span: _,
+        }) = self.tokens.last()
+        {
             let r = Some(val.clone());
             let _ = self.tokens.pop();
             r
@@ -95,10 +149,21 @@ impl Parser {
     }
 
     fn expect_ident(&mut self) -> Result<String> {
-        if let Some(Token::Ident(val)) = self.tokens.pop() {
-            Ok(val)
+        if let Some(token) = self.tokens.pop() {
+            match token.ttype {
+                TokenType::Ident(val) => Ok(val),
+                other => Err(ParseError::ExpectedIdentifier {
+                    found: Some(other),
+                    span: Some(token.span),
+                }
+                .into()),
+            }
         } else {
-            bail!("unexpected non-identifier")
+            Err(ParseError::ExpectedIdentifier {
+                found: None,
+                span: None,
+            }
+            .into())
         }
     }
 
@@ -154,7 +219,19 @@ impl Parser {
         } else if let Some(name) = self.consume_ident() {
             Ok(Expr::variable(name))
         } else {
-            bail!("unexpected token: {:?}", self.tokens.last())
+            if let Some(tok) = self.tokens.pop() {
+                Err(ParseError::ExpectedPrimaryToken {
+                    found: Some(tok.ttype),
+                    span: Some(tok.span),
+                }
+                .into())
+            } else {
+                Err(ParseError::ExpectedPrimaryToken {
+                    found: None,
+                    span: None,
+                }
+                .into())
+            }
         }
     }
 
@@ -415,16 +492,24 @@ impl Parser {
             self.expect(sym!(")"))?;
             Ok(ty)
         } else {
-            if let Some(Token::Type(val)) = self.tokens.pop() {
-                if &val == "int" {
-                    Ok(Type::constant(&val))
-                } else if &val == "bool" {
-                    Ok(Type::constant(&val))
-                } else {
-                    bail!("unexpected type: {val}")
+            match self.tokens.pop() {
+                Some(Token {
+                    ttype: TokenType::Type(val),
+                    span,
+                }) => match val.as_str() {
+                    "int" | "bool" => Ok(Type::constant(&val)),
+                    _ => Err(ParseError::InvalidType { found: val, span }.into()),
+                },
+                Some(Token { ttype, span }) => Err(ParseError::ExpectedType {
+                    found: Some(ttype),
+                    span: Some(span),
                 }
-            } else {
-                bail!("unexpected non-type")
+                .into()),
+                None => Err(ParseError::ExpectedType {
+                    found: None,
+                    span: None,
+                }
+                .into()),
             }
         }
     }
