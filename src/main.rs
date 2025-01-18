@@ -18,10 +18,11 @@ fn main() -> Result<()> {
         r#"
         let w = 5;
         mut w = 7;
-        let f = lambda (w, x) {
+        let f = lambda(w, x) {
             w(w(x))
         };
-        w
+        let q = f(lambda(x) {!x}, true);
+        q
         "#,
     )
     .prog()
@@ -29,7 +30,9 @@ fn main() -> Result<()> {
     let string = &stmt.to_string();
     dbg!(string);
 
-    let inferred = TypeInfer::new().infer_type(&stmt)?;
+    let inferred = TypeInfer::new()
+        .infer_type(&stmt)
+        .context("Type Inferrence Error")?;
     println!("inffered: {}", inferred);
 
     let evaluated = Eval::new()

@@ -1,5 +1,7 @@
 use eval::Eval;
 use parse::Parser;
+use serde::Serialize;
+use tsify::Tsify;
 use type_infer::TypeInfer;
 use wasm_bindgen::prelude::*;
 
@@ -12,26 +14,25 @@ mod tokenize;
 mod type_infer;
 mod types;
 
-#[wasm_bindgen]
-extern "C" {
-    pub fn alert(s: &str);
+#[derive(Tsify, Serialize)]
+#[tsify(into_wasm_abi)]
+pub enum EvaluationResult {
+    Ok(String),
+    ParseError(String),
+    TypeInferError(String),
+    EvaluationError(String),
 }
 
 #[wasm_bindgen]
-pub fn greet(name: &str) {
-    alert(&format!("Hello, {}!", name));
-}
-
-#[wasm_bindgen]
-pub fn eval_script(line: &str) -> JsValue {
+pub fn eval_script(line: &str) -> EvaluationResult {
     match Parser::new(line).prog() {
         Ok(stmt) => match TypeInfer::new().infer_type(&stmt) {
             Ok(_) => match Eval::new().eval(&stmt) {
-                Ok(val) => val.to_string().into(),
-                Err(err) => err.to_string().into(),
+                Ok(val) => EvaluationResult::Ok(val.to_string()),
+                Err(err) => EvaluationResult::EvaluationError(err.to_string()),
             },
-            Err(err) => err.to_string().into(),
+            Err(err) => EvaluationResult::TypeInferError(err.to_string()),
         },
-        Err(err) => err.to_string().into(),
+        Err(err) => EvaluationResult::ParseError(err.to_string()),
     }
 }

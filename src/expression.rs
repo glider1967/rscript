@@ -19,7 +19,10 @@ impl fmt::Display for ExprSpan {
         write!(
             f,
             "{}:{} - {}:{}",
-            self.start.line, self.start.col, self.end.line, self.end.col
+            self.start.line + 1,
+            self.start.col,
+            self.end.line + 1,
+            self.end.col - 1
         )
     }
 }

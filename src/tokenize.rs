@@ -1,3 +1,5 @@
+use core::fmt;
+
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum TokenType {
     Int(i64),
@@ -12,6 +14,19 @@ pub struct Span {
     pub line: u32,
     pub start: u32,
     pub end: u32,
+}
+
+impl fmt::Display for Span {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}:{} - {}:{}",
+            self.line + 1,
+            self.start,
+            self.line + 1,
+            self.end - 1,
+        )
+    }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]

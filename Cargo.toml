@@ -8,5 +8,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 anyhow = "1.0.86"
+serde = { version = "1.0.217", features = ["derive"] }
 thiserror = "2.0.11"
-wasm-bindgen = "0.2"
+tsify = "0.4.5"
+wasm-bindgen = { version = "0.2", features = ["serde-serialize"] }
