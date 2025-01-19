@@ -33,7 +33,7 @@ impl Eval {
             Expr::Variable(name) => self.env.borrow().get(name),
             Expr::Program(prog, ret) => {
                 for expr in prog {
-                    let _ = self.eval(&expr);
+                    self.eval(&expr)?;
                 }
                 self.eval(&ret)
             }
