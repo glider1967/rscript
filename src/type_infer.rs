@@ -4,7 +4,7 @@ use anyhow::{bail, Result};
 use thiserror::Error;
 
 use crate::{
-    expression::{Expr, ExprSpan, SpannedExpr},
+    expression::{ConstructorDef, Expr, ExprSpan, Pattern, SpannedExpr},
     types::Type,
 };
 
@@ -39,8 +39,8 @@ impl TypeEnv {
         }
     }
 
-    fn get(&self, name: String) -> Result<Type> {
-        if let Some(val) = self.env.get(&name) {
+    fn get(&self, name: &str) -> Result<Type> {
+        if let Some(val) = self.env.get(name) {
             Ok(val.clone())
         } else if let Some(outer) = &self.outer {
             outer.borrow().get(name)
@@ -86,7 +86,7 @@ impl TypeInfer {
             Expr::Int(_) => Ok(Type::constant("int")),
             Expr::Bool(_) => Ok(Type::constant("bool")),
             Expr::Variable(name) => {
-                let actual_type = self.env.borrow().get(name.clone())?;
+                let actual_type = self.env.borrow().get(name)?;
                 Ok(self.instantiate(&actual_type))
             }
             Expr::Program(v, ret) => {
@@ -160,11 +160,39 @@ impl TypeInfer {
                 Ok(actual)
             }
             Expr::Reassign(ident, expr) => {
-                let already = self.env.borrow().get(ident.clone())?;
+                let already = self.env.borrow().get(ident)?;
                 let actual = self.infer_type(&expr)?;
 
                 Self::unify_error(&already, &actual, &expr)?;
                 Ok(actual)
+            }
+            Expr::EnumDef(ident, defs) => {
+                for ConstructorDef { name, args } in defs {
+                    self.env.borrow_mut().set(
+                        name.to_owned(),
+                        args.iter().rev().fold(Type::constant(&ident), |acc, ty| {
+                            Type::func(ty.clone(), acc)
+                        }),
+                    );
+                }
+                Ok(Type::constant(&ident))
+            }
+            Expr::Match(expr, arms) => {
+                let ty = self.infer_type(&expr)?;
+                if arms.is_empty() {
+                    return Ok(ty);
+                }
+                let ret_ty = self.new_typevar();
+                for (pattern, expr) in arms {
+                    let mut new_type_infer = Self::from(
+                        TypeEnv::with_outer(Rc::clone(&self.env)),
+                        self.next_typevar_id,
+                    );
+                    new_type_infer.infer_pattern(&pattern, &ty)?;
+                    Self::unify(&ret_ty, &new_type_infer.infer_type(expr)?)?;
+                    self.next_typevar_id = new_type_infer.next_typevar_id;
+                }
+                Ok(ret_ty)
             }
             Expr::Lambda(var, ty, expr) => {
                 let nty = self.new_typevar();
@@ -191,6 +219,21 @@ impl TypeInfer {
                 Ok(nty)
             }
         }
+    }
+
+    fn infer_pattern(&mut self, pattern: &Pattern, ret_ty: &Type) -> Result<()> {
+        let constr_ty = self.env.borrow().get(&pattern.name)?;
+        let (args, rty) = constr_ty.to_args_and_ret();
+        if args.len() != pattern.vars.len() {
+            bail!("number of pattern variable is invalid");
+        }
+        for i in 0..args.len() {
+            let nty = self.new_typevar();
+            Self::unify(&nty, &args[i])?;
+            self.env.borrow_mut().set(pattern.vars[i].to_owned(), nty);
+        }
+        Self::unify(&rty, ret_ty)?;
+        Ok(())
     }
 
     // 単一化 - ”型のつじつま合わせ”

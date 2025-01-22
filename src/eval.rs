@@ -4,7 +4,7 @@ use anyhow::{bail, Ok, Result};
 
 use crate::{
     environment::Env,
-    expression::{Expr, SpannedExpr},
+    expression::{ConstructorDef, Expr, Pattern, SpannedExpr},
     internal_value::Value,
 };
 
@@ -101,6 +101,25 @@ impl Eval {
                 self.env.borrow_mut().set_dup(name, val.clone())?;
                 Ok(val)
             }
+            Expr::EnumDef(_, defs) => {
+                for ConstructorDef { name, args: _ } in defs {
+                    self.env
+                        .borrow_mut()
+                        .set_new(name, Value::Constructor(name.to_owned(), vec![]))?;
+                }
+                Ok(Value::Unit)
+            }
+            Expr::Match(expr, arms) => {
+                let val = self.eval(&expr)?;
+                for (pattern, arm) in arms {
+                    let new_env = Env::with_outer(Rc::clone(&self.env));
+                    let inner_eval = Eval::with_env(new_env);
+                    if inner_eval.match_pattern(&val, &pattern)? {
+                        return inner_eval.eval(arm);
+                    }
+                }
+                bail!("pattern doesn't match any pattern")
+            }
             Expr::Lambda(var, _, expr) => {
                 let new_env = Env::with_outer(Rc::clone(&self.env));
                 Ok(Value::Lambda(var.clone(), expr.clone(), new_env))
@@ -113,10 +132,33 @@ impl Eval {
                         .borrow_mut()
                         .set_new(&arg, self.eval(&var)?)?;
                     inner_eval.eval(&expr)
+                } else if let Value::Constructor(name, vals) = self.eval(&fun)? {
+                    let mut vals = vals;
+                    vals.push(self.eval(var)?);
+                    Ok(Value::Constructor(name, vals))
                 } else {
-                    bail!("eval error: application to non-lambda!")
+                    bail!("eval error: application to non-lambda or non-constructor!")
                 }
             }
+        }
+    }
+
+    pub fn match_pattern(&self, val: &Value, pattern: &Pattern) -> Result<bool> {
+        if let Value::Constructor(constr_name, args) = val {
+            if *constr_name != pattern.name {
+                return Ok(false);
+            }
+            if pattern.vars.len() != args.len() {
+                bail!("number of args does't match");
+            }
+            for i in 0..args.len() {
+                self.env
+                    .borrow_mut()
+                    .set_new(&pattern.vars[i], args[i].clone())?;
+            }
+            Ok(true)
+        } else {
+            Ok(false)
         }
     }
 }

@@ -17,6 +17,21 @@ impl Type {
     pub fn constant(s: &str) -> Self {
         Type::Constant(s.into())
     }
+
+    pub fn to_args_and_ret(&self) -> (Vec<Type>, Type) {
+        let mut args = vec![];
+        let mut ret = self;
+        loop {
+            match ret {
+                Self::Func(arg, r) => {
+                    args.push(*arg.clone());
+                    ret = r
+                }
+                _ => break,
+            }
+        }
+        (args, ret.clone())
+    }
 }
 
 impl fmt::Display for Type {

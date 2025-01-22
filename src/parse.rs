@@ -1,5 +1,5 @@
 use crate::{
-    expression::{ExprSpan, SpannedExpr},
+    expression::{ConstructorDef, ExprSpan, Pattern, SpannedExpr},
     tokenize::{Span, Token, TokenType, Tokenizer},
     types::Type,
 };
@@ -228,6 +228,19 @@ impl Parser {
 
             Ok(SpannedExpr::new(
                 ret.expr,
+                ExprSpan::from_two_span(&start_span, &end_token.span),
+            ))
+        } else if let Some(start_span) = self.consume(kwd!("match")) {
+            self.expect(sym!("("))?;
+            let expr = self.expr()?;
+            self.expect(sym!(")"))?;
+            self.expect(sym!("{"))?;
+            let arms = self.arms()?;
+            let end_token = self.expect(sym!("}"))?;
+
+            Ok(SpannedExpr::match_expr(
+                expr,
+                arms,
                 ExprSpan::from_two_span(&start_span, &end_token.span),
             ))
         } else if let Some(start_span) = self.consume(sym!("(")) {
@@ -483,6 +496,17 @@ impl Parser {
                     expr,
                     ExprSpan::from_two_span(&start_span, &end_token.span),
                 ));
+            } else if let Some(start_span) = self.consume(kwd!("enum")) {
+                let ident = self.expect_ident()?;
+                self.expect(sym!("{"))?;
+                let defs = self.constructor_defs()?;
+                self.expect(sym!("}"))?;
+                let end_token = self.expect(sym!(";"))?;
+                prog.push(SpannedExpr::enum_def(
+                    ident,
+                    defs,
+                    ExprSpan::from_two_span(&start_span, &end_token.span),
+                ));
             } else {
                 break;
             }
@@ -495,6 +519,75 @@ impl Parser {
             ExprSpan::from_two_exprspan(&prog[0].span, &ret.span)
         };
         Ok(SpannedExpr::program(prog, ret, ret_span))
+    }
+
+    fn constructor_defs(&mut self) -> Result<Vec<ConstructorDef>> {
+        let def = self.constructor_def()?;
+        let mut defs = vec![def];
+        loop {
+            if let Some(_) = self.consume(sym!(",")) {
+                let def = self.constructor_def()?;
+                defs.push(def);
+            } else {
+                break;
+            }
+        }
+        Ok(defs)
+    }
+
+    fn constructor_def(&mut self) -> Result<ConstructorDef> {
+        let name = self.expect_ident()?;
+        let mut args = vec![];
+        if let Some(_) = self.consume(sym!("(")) {
+            let arg = self.parse_ty()?;
+            args.push(arg);
+            loop {
+                if let Some(_) = self.consume(sym!(",")) {
+                    let arg = self.parse_ty()?;
+                    args.push(arg);
+                } else {
+                    break;
+                }
+            }
+            self.expect(sym!(")"))?;
+        }
+        Ok(ConstructorDef { name, args })
+    }
+
+    fn arms(&mut self) -> Result<Vec<(Pattern, SpannedExpr)>> {
+        let def = self.arm()?;
+        let mut defs = vec![def];
+        loop {
+            if let Some(_) = self.consume(sym!(",")) {
+                let def = self.arm()?;
+                defs.push(def);
+            } else {
+                break;
+            }
+        }
+        Ok(defs)
+    }
+
+    fn arm(&mut self) -> Result<(Pattern, SpannedExpr)> {
+        let name = self.expect_ident()?;
+        let mut vars = vec![];
+        if let Some(_) = self.consume(sym!("(")) {
+            let arg = self.expect_ident()?;
+            vars.push(arg);
+            loop {
+                if let Some(_) = self.consume(sym!(",")) {
+                    let arg = self.expect_ident()?;
+                    vars.push(arg);
+                } else {
+                    break;
+                }
+            }
+            self.expect(sym!(")"))?;
+        }
+        let pat = Pattern { name, vars };
+        self.expect(sym!("=>"))?;
+        let expr = self.expr()?;
+        Ok((pat, expr))
     }
 
     // =====================================================================
@@ -535,6 +628,11 @@ impl Parser {
                     "int" | "bool" => Ok(Type::constant(&val)),
                     _ => Err(ParseError::InvalidType { found: val, span }.into()),
                 },
+                Some(Token {
+                    ttype: TokenType::Ident(val),
+                    span: _,
+                }) => Ok(Type::constant(&val)),
+
                 Some(Token { ttype, span }) => Err(ParseError::ExpectedType {
                     found: Some(ttype),
                     span: Some(span),

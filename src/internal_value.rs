@@ -7,6 +7,8 @@ pub enum Value {
     Int(i64),
     Bool(bool),
     Lambda(String, Box<SpannedExpr>, Env),
+    Constructor(String, Vec<Value>),
+    Unit,
 }
 
 impl fmt::Display for Value {
@@ -14,7 +16,16 @@ impl fmt::Display for Value {
         match self {
             Value::Bool(b) => write!(f, "{b}"),
             Value::Int(i) => write!(f, "{i}"),
-            Value::Lambda(v, expr, _) => write!(f, "lambda ({v}) {{ {expr} }}"),
+            Value::Lambda(v, expr, _) => write!(f, "lambda ({v}) {{{expr} }}"),
+            Value::Constructor(name, vals) => write!(
+                f,
+                "{name}({})",
+                vals.iter()
+                    .map(|x| x.to_string())
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ),
+            Value::Unit => write!(f, "()"),
         }
     }
 }

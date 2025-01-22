@@ -89,8 +89,22 @@ pub enum Expr {
     If(Box<SpannedExpr>, Box<SpannedExpr>, Box<SpannedExpr>),
     Assign(String, Option<Type>, Box<SpannedExpr>),
     Reassign(String, Box<SpannedExpr>),
+    EnumDef(String, Vec<ConstructorDef>),
+    Match(Box<SpannedExpr>, Vec<(Pattern, SpannedExpr)>),
     Lambda(String, Option<Type>, Box<SpannedExpr>),
     App(Box<SpannedExpr>, Box<SpannedExpr>),
+}
+
+#[derive(PartialEq, Eq, Debug, Clone)]
+pub struct ConstructorDef {
+    pub name: String,
+    pub args: Vec<Type>,
+}
+
+#[derive(PartialEq, Eq, Debug, Clone)]
+pub struct Pattern {
+    pub name: String,
+    pub vars: Vec<String>,
 }
 
 impl SpannedExpr {
@@ -143,6 +157,18 @@ impl SpannedExpr {
         SpannedExpr::new(Expr::Reassign(name, Box::new(expr)), span)
     }
 
+    pub fn enum_def(name: String, defs: Vec<ConstructorDef>, span: ExprSpan) -> Self {
+        SpannedExpr::new(Expr::EnumDef(name, defs), span)
+    }
+
+    pub fn match_expr(
+        expr: SpannedExpr,
+        arms: Vec<(Pattern, SpannedExpr)>,
+        span: ExprSpan,
+    ) -> Self {
+        SpannedExpr::new(Expr::Match(Box::new(expr), arms), span)
+    }
+
     pub fn lambda(param: String, ty: Option<Type>, body: SpannedExpr, span: ExprSpan) -> Self {
         SpannedExpr::new(Expr::Lambda(param, ty, Box::new(body)), span)
     }
@@ -187,6 +213,26 @@ impl fmt::Display for Expr {
             Expr::Reassign(ident, expr) => {
                 write!(f, "mut {ident} = {expr};")
             }
+            Expr::EnumDef(name, defs) => {
+                write!(
+                    f,
+                    "enum {name}: {{ {} }};",
+                    defs.iter()
+                        .map(|x| x.to_string())
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                )
+            }
+            Expr::Match(expr, arms) => {
+                write!(
+                    f,
+                    "match ({expr}) {{ {} }}",
+                    arms.iter()
+                        .map(|(p, e)| format!("{p} => {{ {e} }}"))
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                )
+            }
             Expr::Lambda(var, ty, expr) => {
                 let tt = if ty.is_some() {
                     ty.as_ref().unwrap().to_string()
@@ -199,6 +245,27 @@ impl fmt::Display for Expr {
                 write!(f, "{fun}({var})")
             }
         }
+    }
+}
+
+impl fmt::Display for ConstructorDef {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}({})",
+            self.name,
+            self.args
+                .iter()
+                .map(|x| x.to_string())
+                .collect::<Vec<_>>()
+                .join(", ")
+        )
+    }
+}
+
+impl fmt::Display for Pattern {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}({})", self.name, self.vars.join(", "))
     }
 }
 
