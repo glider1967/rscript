@@ -9,6 +9,7 @@ mod eval;
 mod expression;
 mod internal_value;
 mod parse;
+mod span;
 mod tokenize;
 mod type_infer;
 mod types;
@@ -16,30 +17,32 @@ mod types;
 fn main() -> Result<()> {
     let stmt = Parser::new(
         r#"
-        let w = 5;
-        mut w = 7;
-        let f = lambda(w, x) {
-            w(w(x))
+        enum List {
+            Cons(int, List),
+            Nil
         };
-        let q = f(lambda(x) {!x}, true);
-        q
+        let len = lambda(l: List) {
+            match (l) {
+                Cons(x, y) => x + len(y),
+                Nil => 0
+            }
+        };
+        let s: string = "sgt hjk <\n\"\\<<< " ++ "p";
+        s
         "#,
     )
     .prog()
     .context("Parse Error")?;
     let string = &stmt.to_string();
-    dbg!(string);
+    println!("{}", string);
 
     let inferred = TypeInfer::new()
         .infer_type(&stmt)
         .context("Type Inferrence Error")?;
     println!("inffered: {}", inferred);
 
-    let evaluated = Eval::new()
-        .eval(&stmt)
-        .context("Evaluation Error")?
-        .to_string();
-    dbg!(evaluated);
+    let evaluated = Eval::new().eval(&stmt).context("Evaluation Error")?;
+    println!("{}", evaluated.to_string());
 
     // let stmt = Parser::new(
     //     r#"

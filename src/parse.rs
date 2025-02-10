@@ -1,6 +1,7 @@
 use crate::{
-    expression::{ConstructorDef, ExprSpan, Pattern, SpannedExpr},
-    tokenize::{Span, Token, TokenType, Tokenizer},
+    expression::{ConstructorDef, Pattern, SpannedExpr},
+    span::Span,
+    tokenize::{Token, TokenType, Tokenizer},
     types::Type,
 };
 
@@ -243,7 +244,7 @@ impl Parser {
 
             Ok(SpannedExpr::new(
                 ret.expr,
-                ExprSpan::from_two_span(&start_span, &end_token.span),
+                Span::compose(&start_span, &end_token.span),
             ))
         } else if let Some(start_span) = self.consume(kwd!("match")) {
             self.expect(sym!("("))?;
@@ -256,7 +257,7 @@ impl Parser {
             Ok(SpannedExpr::match_expr(
                 expr,
                 arms,
-                ExprSpan::from_two_span(&start_span, &end_token.span),
+                Span::compose(&start_span, &end_token.span),
             ))
         } else if let Some(start_span) = self.consume(sym!("(")) {
             let exp = self.expr()?;
@@ -264,7 +265,7 @@ impl Parser {
 
             Ok(SpannedExpr::new(
                 exp.expr,
-                ExprSpan::from_two_span(&start_span, &end_token.span),
+                Span::compose(&start_span, &end_token.span),
             ))
         } else if let Some(token) = self.consume_int() {
             Ok(SpannedExpr::int(token.value, token.span))
@@ -307,7 +308,7 @@ impl Parser {
                 cond,
                 exp1,
                 exp2,
-                ExprSpan::from_two_span(&start_span, &end_token.span),
+                Span::compose(&start_span, &end_token.span),
             ))
         } else {
             self.or()
@@ -480,12 +481,12 @@ impl Parser {
         let mut ret = self.primary()?;
         if let Some(_) = self.consume(sym!("(")) {
             let var = self.expr()?;
-            let span = ExprSpan::from_two_exprspan(&ret.span, &var.span);
+            let span = Span::compose(&ret.span, &var.span);
             ret = SpannedExpr::app(ret, var, span);
             loop {
                 if let Some(_) = self.consume(sym!(",")) {
                     let var = self.expr()?;
-                    let span = ExprSpan::from_two_exprspan(&ret.span, &var.span);
+                    let span = Span::compose(&ret.span, &var.span);
                     ret = SpannedExpr::app(ret, var, span);
                 } else {
                     break;
@@ -513,7 +514,7 @@ impl Parser {
                     ident,
                     ty,
                     expr,
-                    ExprSpan::from_two_span(&start_span, &end_token.span),
+                    Span::compose(&start_span, &end_token.span),
                 ));
             } else if let Some(start_span) = self.consume(kwd!("mut")) {
                 let ident = self.expect_ident()?;
@@ -523,7 +524,7 @@ impl Parser {
                 prog.push(SpannedExpr::reassign(
                     ident,
                     expr,
-                    ExprSpan::from_two_span(&start_span, &end_token.span),
+                    Span::compose(&start_span, &end_token.span),
                 ));
             } else if let Some(start_span) = self.consume(kwd!("enum")) {
                 let ident = self.expect_ident()?;
@@ -534,7 +535,7 @@ impl Parser {
                 prog.push(SpannedExpr::enum_def(
                     ident,
                     defs,
-                    ExprSpan::from_two_span(&start_span, &end_token.span),
+                    Span::compose(&start_span, &end_token.span),
                 ));
             } else {
                 break;
@@ -545,7 +546,7 @@ impl Parser {
         let ret_span = if prog.is_empty() {
             ret.span.clone()
         } else {
-            ExprSpan::from_two_exprspan(&prog[0].span, &ret.span)
+            Span::compose(&prog[0].span, &ret.span)
         };
         Ok(SpannedExpr::program(prog, ret, ret_span))
     }

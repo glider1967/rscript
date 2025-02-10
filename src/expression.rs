@@ -1,81 +1,11 @@
 use core::fmt;
 
-use crate::{tokenize::Span, types::Type};
-
-#[derive(PartialEq, Eq, Debug, Clone, Copy)]
-pub struct Position {
-    pub line: u32,
-    pub col: u32,
-}
-
-#[derive(PartialEq, Eq, Debug, Clone)]
-pub struct ExprSpan {
-    pub start: Position,
-    pub end: Position,
-}
-
-impl fmt::Display for ExprSpan {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}:{} - {}:{}",
-            self.start.line + 1,
-            self.start.col,
-            self.end.line + 1,
-            self.end.col - 1
-        )
-    }
-}
-
-impl ExprSpan {
-    pub fn from_two_span(start: &Span, end: &Span) -> ExprSpan {
-        ExprSpan {
-            start: Position {
-                line: start.line,
-                col: start.start,
-            },
-            end: Position {
-                line: end.line,
-                col: end.end,
-            },
-        }
-    }
-
-    pub fn from_two_exprspan(a: &ExprSpan, b: &ExprSpan) -> ExprSpan {
-        ExprSpan {
-            start: a.start,
-            end: b.end,
-        }
-    }
-
-    pub fn from_span_and_exprspan(a: &Span, b: &ExprSpan) -> ExprSpan {
-        ExprSpan {
-            start: Position {
-                line: a.line,
-                col: a.start,
-            },
-            end: b.end,
-        }
-    }
-
-    pub fn from(span: Span) -> ExprSpan {
-        ExprSpan {
-            start: Position {
-                line: span.line,
-                col: span.start,
-            },
-            end: Position {
-                line: span.line,
-                col: span.end,
-            },
-        }
-    }
-}
+use crate::{span::Span, types::Type};
 
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub struct SpannedExpr {
     pub expr: Expr,
-    pub span: ExprSpan,
+    pub span: Span,
 }
 
 #[derive(PartialEq, Eq, Debug, Clone)]
@@ -109,28 +39,28 @@ pub struct Pattern {
 }
 
 impl SpannedExpr {
-    pub fn new(expr: Expr, span: ExprSpan) -> Self {
+    pub fn new(expr: Expr, span: Span) -> Self {
         SpannedExpr { expr, span }
     }
 
     pub fn int(num: i64, span: Span) -> Self {
-        SpannedExpr::new(Expr::Int(num), ExprSpan::from(span))
+        SpannedExpr::new(Expr::Int(num), Span::from(span))
     }
 
     pub fn boolean(b: bool, span: Span) -> Self {
-        SpannedExpr::new(Expr::Bool(b), ExprSpan::from(span))
+        SpannedExpr::new(Expr::Bool(b), Span::from(span))
     }
 
     pub fn string(s: String, span: Span) -> Self {
-        SpannedExpr::new(Expr::Str(s), ExprSpan::from(span))
+        SpannedExpr::new(Expr::Str(s), Span::from(span))
     }
 
     pub fn variable(name: String, span: Span) -> Self {
-        SpannedExpr::new(Expr::Variable(name), ExprSpan::from(span))
+        SpannedExpr::new(Expr::Variable(name), Span::from(span))
     }
 
     pub fn binary_op(op: String, left: SpannedExpr, right: SpannedExpr) -> Self {
-        let span = ExprSpan::from_two_exprspan(&left.span, &right.span);
+        let span = Span::compose(&left.span, &right.span);
         SpannedExpr::new(Expr::BinOp(op, Box::new(left), Box::new(right)), span)
     }
 
@@ -138,51 +68,42 @@ impl SpannedExpr {
         let expr_span = expr.span.clone();
         SpannedExpr::new(
             Expr::UnaryOp(op, Box::new(expr)),
-            ExprSpan::from_span_and_exprspan(&span, &expr_span),
+            Span::compose(&span, &expr_span),
         )
     }
 
-    pub fn if_expr(
-        cond: SpannedExpr,
-        then: SpannedExpr,
-        else_: SpannedExpr,
-        span: ExprSpan,
-    ) -> Self {
+    pub fn if_expr(cond: SpannedExpr, then: SpannedExpr, else_: SpannedExpr, span: Span) -> Self {
         SpannedExpr::new(
             Expr::If(Box::new(cond), Box::new(then), Box::new(else_)),
             span,
         )
     }
 
-    pub fn assign(name: String, ty: Option<Type>, expr: SpannedExpr, span: ExprSpan) -> Self {
+    pub fn assign(name: String, ty: Option<Type>, expr: SpannedExpr, span: Span) -> Self {
         SpannedExpr::new(Expr::Assign(name, ty, Box::new(expr)), span)
     }
 
-    pub fn reassign(name: String, expr: SpannedExpr, span: ExprSpan) -> Self {
+    pub fn reassign(name: String, expr: SpannedExpr, span: Span) -> Self {
         SpannedExpr::new(Expr::Reassign(name, Box::new(expr)), span)
     }
 
-    pub fn enum_def(name: String, defs: Vec<ConstructorDef>, span: ExprSpan) -> Self {
+    pub fn enum_def(name: String, defs: Vec<ConstructorDef>, span: Span) -> Self {
         SpannedExpr::new(Expr::EnumDef(name, defs), span)
     }
 
-    pub fn match_expr(
-        expr: SpannedExpr,
-        arms: Vec<(Pattern, SpannedExpr)>,
-        span: ExprSpan,
-    ) -> Self {
+    pub fn match_expr(expr: SpannedExpr, arms: Vec<(Pattern, SpannedExpr)>, span: Span) -> Self {
         SpannedExpr::new(Expr::Match(Box::new(expr), arms), span)
     }
 
-    pub fn lambda(param: String, ty: Option<Type>, body: SpannedExpr, span: ExprSpan) -> Self {
+    pub fn lambda(param: String, ty: Option<Type>, body: SpannedExpr, span: Span) -> Self {
         SpannedExpr::new(Expr::Lambda(param, ty, Box::new(body)), span)
     }
 
-    pub fn app(func: SpannedExpr, arg: SpannedExpr, span: ExprSpan) -> Self {
+    pub fn app(func: SpannedExpr, arg: SpannedExpr, span: Span) -> Self {
         SpannedExpr::new(Expr::App(Box::new(func), Box::new(arg)), span)
     }
 
-    pub fn program(exprs: Vec<SpannedExpr>, last: SpannedExpr, span: ExprSpan) -> Self {
+    pub fn program(exprs: Vec<SpannedExpr>, last: SpannedExpr, span: Span) -> Self {
         SpannedExpr::new(Expr::Program(exprs, Box::new(last)), span)
     }
 }

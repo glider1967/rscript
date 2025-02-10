@@ -1,4 +1,4 @@
-use core::fmt;
+use crate::span::Span;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum TokenType {
@@ -11,26 +11,6 @@ pub enum TokenType {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct Span {
-    pub line: u32,
-    pub start: u32,
-    pub end: u32,
-}
-
-impl fmt::Display for Span {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}:{} - {}:{}",
-            self.line + 1,
-            self.start,
-            self.line + 1,
-            self.end - 1,
-        )
-    }
-}
-
-#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Token {
     pub ttype: TokenType,
     pub span: Span,
@@ -40,7 +20,7 @@ impl Token {
     fn new(ttype: TokenType, line: u32, start: u32, end: u32) -> Token {
         Token {
             ttype,
-            span: Span { line, start, end },
+            span: Span::new(line, start, end),
         }
     }
 }

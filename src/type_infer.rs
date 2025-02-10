@@ -4,7 +4,8 @@ use anyhow::{bail, Ok, Result};
 use thiserror::Error;
 
 use crate::{
-    expression::{ConstructorDef, Expr, ExprSpan, Pattern, SpannedExpr},
+    expression::{ConstructorDef, Expr, Pattern, SpannedExpr},
+    span::Span,
     types::Type,
 };
 
@@ -14,7 +15,7 @@ pub enum TypeInferError {
     UnificationError {
         ty1: String,
         ty2: String,
-        span: ExprSpan,
+        span: Span,
     },
 }
 

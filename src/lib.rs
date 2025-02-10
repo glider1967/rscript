@@ -10,6 +10,7 @@ mod eval;
 mod expression;
 mod internal_value;
 mod parse;
+mod span;
 mod tokenize;
 mod type_infer;
 mod types;
