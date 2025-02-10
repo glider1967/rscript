@@ -260,22 +260,7 @@ impl Parser {
                 Span::compose(&start_span, &end_token.span),
             ))
         } else if let Some(start_span) = self.consume(kwd!("if")) {
-            self.expect(sym!("("))?;
-            let cond = self.expr()?;
-            self.expect(sym!(")"))?;
-            self.expect(sym!("{"))?;
-            let exp1 = self.expr()?;
-            self.expect(sym!("}"))?;
-            self.expect(kwd!("else"))?;
-            self.expect(sym!("{"))?;
-            let exp2 = self.expr()?;
-            let end_token = self.expect(sym!("}"))?;
-            Ok(SpannedExpr::if_expr(
-                cond,
-                exp1,
-                exp2,
-                Span::compose(&start_span, &end_token.span),
-            ))
+            self.if_expr(&start_span)
         } else if let Some(start_span) = self.consume(sym!("(")) {
             let exp = self.expr()?;
             let end_token = self.expect(sym!(")"))?;
@@ -306,6 +291,37 @@ impl Parser {
                 }
                 .into())
             }
+        }
+    }
+
+    fn if_expr(&mut self, start_span: &Span) -> Result<SpannedExpr> {
+        self.expect(sym!("("))?;
+        let cond = self.expr()?;
+        self.expect(sym!(")"))?;
+        self.expect(sym!("{"))?;
+        let then_expr = self.expr()?;
+        self.expect(sym!("}"))?;
+        self.expect(kwd!("else"))?;
+
+        if let Some(if_span) = self.consume(kwd!("if")) {
+            let else_if_expr = self.if_expr(&if_span)?;
+            let end_span = else_if_expr.span.clone();
+            Ok(SpannedExpr::if_expr(
+                cond,
+                then_expr,
+                else_if_expr,
+                Span::compose(&start_span, &end_span),
+            ))
+        } else {
+            self.expect(sym!("{"))?;
+            let else_expr = self.expr()?;
+            let end_token = self.expect(sym!("}"))?;
+            Ok(SpannedExpr::if_expr(
+                cond,
+                then_expr,
+                else_expr,
+                Span::compose(&start_span, &end_token.span),
+            ))
         }
     }
 
