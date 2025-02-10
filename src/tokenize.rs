@@ -136,6 +136,9 @@ impl<'a> Tokenizer<'a> {
                 // その他演算子
                 while let Some(punctch) = program.peek() {
                     if punctch.is_ascii_punctuation() {
+                        if parens.contains(*punctch) {
+                            break;
+                        }
                         signs.push(*punctch);
                         let _ = program.next();
                         self.col += 1;

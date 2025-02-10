@@ -141,6 +141,11 @@ impl TypeInfer {
                     Self::unify_bool(&t1, &expr)?;
                     Ok(Type::constant("bool"))
                 }
+                "~" => {
+                    let t1 = self.infer_type(&expr)?;
+                    Self::unify_int(&t1, &expr)?;
+                    Ok(Type::constant("string"))
+                }
                 _ => bail!("invalid operator: {}", op),
             },
             Expr::If(cond, exp1, exp2) => {

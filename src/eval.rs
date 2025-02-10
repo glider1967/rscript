@@ -75,6 +75,7 @@ impl Eval {
                 match v1 {
                     Value::Int(x) => match op.as_str() {
                         "-" => Ok(Value::Int(-x)),
+                        "~" => Ok(Value::Str(x.to_string())),
                         _ => bail!("invalid binary operation {}", op),
                     },
                     Value::Bool(x) => match op.as_str() {

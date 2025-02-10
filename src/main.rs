@@ -17,18 +17,26 @@ mod types;
 fn main() -> Result<()> {
     let stmt = Parser::new(
         r#"
-        enum List {
-            Cons(int, List),
-            Nil
-        };
-        let len = lambda(l: List) {
-            match (l) {
-                Cons(x, y) => x + len(y),
-                Nil => 0
+        let fizzbuzz = lambda(n: int) {
+            if (n == 0) {
+                ""
+            } else {
+                if (n % 15 == 0) {
+                    fizzbuzz(n - 1) ++ "FizzBuzz\n"
+                } else {
+                    if (n % 5 == 0) {
+                        fizzbuzz(n - 1) ++ "Buzz\n"
+                    } else {
+                        if (n % 3 == 0) {
+                            fizzbuzz(n - 1) ++ "Fizz\n"
+                        } else {
+                            fizzbuzz(n - 1) ++ ~n ++ "\n"
+                        }
+                    }
+                }
             }
         };
-        let s: string = "sgt hjk <\n\"\\<<< " ++ "p";
-        s
+        fizzbuzz(30)
         "#,
     )
     .prog()
@@ -43,19 +51,5 @@ fn main() -> Result<()> {
 
     let evaluated = Eval::new().eval(&stmt).context("Evaluation Error")?;
     println!("{}", evaluated.to_string());
-
-    // let stmt = Parser::new(
-    //     r#"
-    //     let f = lambda (n) {
-    //         if(n == 1 || n == 2) { 1 } else { f(n-1) + f(n-2) }
-    //     };
-    //     f(10)
-    //     "#,
-    // )
-    // .prog()?;
-    // dbg!(&stmt.to_string());
-    // dbg!(TypeInfer::new().infer_type(&stmt)?);
-
-    // dbg!(Eval::new().eval(&stmt)?.to_string());
     Ok(())
 }

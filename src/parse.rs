@@ -200,7 +200,7 @@ impl Parser {
     }
 
     fn expr(&mut self) -> Result<SpannedExpr> {
-        self.parse_if()
+        self.or()
     }
 
     fn ident_and_opt_types(&mut self) -> Result<Vec<(String, Option<Type>)>> {
@@ -259,6 +259,23 @@ impl Parser {
                 arms,
                 Span::compose(&start_span, &end_token.span),
             ))
+        } else if let Some(start_span) = self.consume(kwd!("if")) {
+            self.expect(sym!("("))?;
+            let cond = self.expr()?;
+            self.expect(sym!(")"))?;
+            self.expect(sym!("{"))?;
+            let exp1 = self.expr()?;
+            self.expect(sym!("}"))?;
+            self.expect(kwd!("else"))?;
+            self.expect(sym!("{"))?;
+            let exp2 = self.expr()?;
+            let end_token = self.expect(sym!("}"))?;
+            Ok(SpannedExpr::if_expr(
+                cond,
+                exp1,
+                exp2,
+                Span::compose(&start_span, &end_token.span),
+            ))
         } else if let Some(start_span) = self.consume(sym!("(")) {
             let exp = self.expr()?;
             let end_token = self.expect(sym!(")"))?;
@@ -289,29 +306,6 @@ impl Parser {
                 }
                 .into())
             }
-        }
-    }
-
-    fn parse_if(&mut self) -> Result<SpannedExpr> {
-        if let Some(start_span) = self.consume(kwd!("if")) {
-            self.expect(sym!("("))?;
-            let cond = self.or()?;
-            self.expect(sym!(")"))?;
-            self.expect(sym!("{"))?;
-            let exp1 = self.or()?;
-            self.expect(sym!("}"))?;
-            self.expect(kwd!("else"))?;
-            self.expect(sym!("{"))?;
-            let exp2 = self.or()?;
-            let end_token = self.expect(sym!("}"))?;
-            Ok(SpannedExpr::if_expr(
-                cond,
-                exp1,
-                exp2,
-                Span::compose(&start_span, &end_token.span),
-            ))
-        } else {
-            self.or()
         }
     }
 
@@ -475,6 +469,8 @@ impl Parser {
             Ok(SpannedExpr::unary_op("-".into(), self.app()?, sp))
         } else if let Some(sp) = self.consume(sym!("!")) {
             Ok(SpannedExpr::unary_op("!".into(), self.app()?, sp))
+        } else if let Some(sp) = self.consume(sym!("~")) {
+            Ok(SpannedExpr::unary_op("~".into(), self.app()?, sp))
         } else {
             Ok(self.app()?)
         }
