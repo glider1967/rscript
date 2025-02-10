@@ -3,6 +3,7 @@ use core::fmt;
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum TokenType {
     Int(i64),
+    Str(String),
     Symbol(String),
     Keyword(String),
     Type(String),
@@ -64,7 +65,7 @@ impl<'a> Tokenizer<'a> {
         let keywords: Vec<&str> = vec![
             "true", "false", "if", "else", "let", "mut", "lambda", "enum", "match",
         ];
-        let types: Vec<&str> = vec!["int", "bool"];
+        let types: Vec<&str> = vec!["int", "bool", "string"];
 
         let mut ret = vec![];
         let mut program = self.input.chars().peekable();
@@ -108,6 +109,29 @@ impl<'a> Tokenizer<'a> {
             if ch.is_ascii_punctuation() {
                 let mut signs = ch.to_string();
                 let start_col = self.col;
+
+                if ch == '\"' {
+                    let mut string = "".to_string();
+                    let start_col = self.col;
+                    while let Some(ch) = program.peek() {
+                        if *ch != '\"' {
+                            string.push(*ch);
+                            let _ = program.next();
+                            self.col += 1;
+                        } else {
+                            let _ = program.next();
+                            self.col += 1;
+                            break;
+                        }
+                    }
+                    ret.push(Token::new(
+                        TokenType::Str(string),
+                        self.line,
+                        start_col,
+                        self.col + 1,
+                    ));
+                    continue;
+                }
 
                 // カッコ
                 if parens.contains(ch) {

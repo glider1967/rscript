@@ -30,6 +30,7 @@ impl Eval {
         match expr {
             Expr::Int(v) => Ok(Value::Int(*v)),
             Expr::Bool(v) => Ok(Value::Bool(*v)),
+            Expr::Str(s) => Ok(Value::Str(s.clone())),
             Expr::Variable(name) => self.env.borrow().get(name),
             Expr::Program(prog, ret) => {
                 for expr in prog {
@@ -41,6 +42,10 @@ impl Eval {
                 let v1 = self.eval(&exp1)?;
                 let v2 = self.eval(&exp2)?;
                 match (v1, v2) {
+                    (Value::Str(x), Value::Str(y)) => match op.as_str() {
+                        "++" => Ok(Value::Str(x + &y)),
+                        _ => bail!("invalid binary operation {}", op),
+                    },
                     (Value::Int(x), Value::Int(y)) => match op.as_str() {
                         "+" => Ok(Value::Int(x + y)),
                         "-" => Ok(Value::Int(x - y)),

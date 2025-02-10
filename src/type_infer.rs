@@ -1,6 +1,6 @@
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
-use anyhow::{bail, Result};
+use anyhow::{bail, Ok, Result};
 use thiserror::Error;
 
 use crate::{
@@ -85,6 +85,7 @@ impl TypeInfer {
         match expr {
             Expr::Int(_) => Ok(Type::constant("int")),
             Expr::Bool(_) => Ok(Type::constant("bool")),
+            Expr::Str(_) => Ok(Type::constant("string")),
             Expr::Variable(name) => {
                 let actual_type = self.env.borrow().get(name)?;
                 Ok(self.instantiate(&actual_type))
@@ -98,6 +99,13 @@ impl TypeInfer {
                 Ok(ret_type)
             }
             Expr::BinOp(op, exp1, exp2) => match op.as_str() {
+                "++" => {
+                    let t1 = self.infer_type(&exp1)?;
+                    let t2 = self.infer_type(&exp2)?;
+                    Self::unify_str(&t1, &exp1)?;
+                    Self::unify_str(&t2, &exp2)?;
+                    Ok(Type::constant("string"))
+                }
                 "+" | "-" | "*" | "/" => {
                     let t1 = self.infer_type(&exp1)?;
                     let t2 = self.infer_type(&exp2)?;
@@ -276,6 +284,17 @@ impl TypeInfer {
             TypeInferError::UnificationError {
                 ty1: ty.to_string(),
                 ty2: "bool".to_string(),
+                span: expr.span.clone(),
+            }
+            .into()
+        })
+    }
+
+    fn unify_str(ty: &Type, expr: &SpannedExpr) -> Result<()> {
+        Self::unify(&ty, &Type::constant("string")).map_err(|_| {
+            TypeInferError::UnificationError {
+                ty1: ty.to_string(),
+                ty2: "string".to_string(),
                 span: expr.span.clone(),
             }
             .into()

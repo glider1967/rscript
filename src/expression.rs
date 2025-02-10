@@ -82,6 +82,7 @@ pub struct SpannedExpr {
 pub enum Expr {
     Int(i64),
     Bool(bool),
+    Str(String),
     Variable(String),
     Program(Vec<SpannedExpr>, Box<SpannedExpr>),
     BinOp(String, Box<SpannedExpr>, Box<SpannedExpr>),
@@ -118,6 +119,10 @@ impl SpannedExpr {
 
     pub fn boolean(b: bool, span: Span) -> Self {
         SpannedExpr::new(Expr::Bool(b), ExprSpan::from(span))
+    }
+
+    pub fn string(s: String, span: Span) -> Self {
+        SpannedExpr::new(Expr::Str(s), ExprSpan::from(span))
     }
 
     pub fn variable(name: String, span: Span) -> Self {
@@ -187,6 +192,7 @@ impl fmt::Display for Expr {
         match self {
             Expr::Int(v) => write!(f, "{v}"),
             Expr::Bool(v) => write!(f, "{v}"),
+            Expr::Str(s) => write!(f, "\"{s}\""),
             Expr::Variable(name) => write!(f, "{name}"),
             Expr::Program(v, ret) => write!(
                 f,

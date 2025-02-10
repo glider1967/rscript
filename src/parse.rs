@@ -111,6 +111,21 @@ impl Parser {
         }
     }
 
+    fn consume_string(&mut self) -> Option<TokenInfo<String>> {
+        if let Some(Token {
+            ttype: TokenType::Str(val),
+            span,
+        }) = self.tokens.last()
+        {
+            let span = span.clone();
+            let val = val.clone();
+            self.tokens.pop();
+            Some(TokenInfo { value: val, span })
+        } else {
+            None
+        }
+    }
+
     fn consume_ident(&mut self) -> Option<TokenInfo<String>> {
         if let Some(Token {
             ttype: TokenType::Ident(val),
@@ -255,6 +270,8 @@ impl Parser {
             Ok(SpannedExpr::int(token.value, token.span))
         } else if let Some(token) = self.consume_bool() {
             Ok(SpannedExpr::boolean(token.value, token.span))
+        } else if let Some(token) = self.consume_string() {
+            Ok(SpannedExpr::string(token.value, token.span))
         } else if let Some(token) = self.consume_ident() {
             Ok(SpannedExpr::variable(token.value, token.span))
         } else {
@@ -360,21 +377,21 @@ impl Parser {
     }
 
     fn rel(&mut self) -> Result<SpannedExpr> {
-        let mut ret = self.add()?;
+        let mut ret = self.concat()?;
         let mut now: SpannedExpr;
         let mut prev: SpannedExpr;
 
         if let Some(_) = self.consume(sym!("<")) {
-            now = self.add()?;
+            now = self.concat()?;
             ret = SpannedExpr::binary_op("<".into(), ret, now.clone());
         } else if let Some(_) = self.consume(sym!(">")) {
-            now = self.add()?;
+            now = self.concat()?;
             ret = SpannedExpr::binary_op(">".into(), ret, now.clone());
         } else if let Some(_) = self.consume(sym!("<=")) {
-            now = self.add()?;
+            now = self.concat()?;
             ret = SpannedExpr::binary_op("<=".into(), ret, now.clone());
         } else if let Some(_) = self.consume(sym!(">=")) {
-            now = self.add()?;
+            now = self.concat()?;
             ret = SpannedExpr::binary_op(">=".into(), ret, now.clone());
         } else {
             return Ok(ret);
@@ -383,24 +400,36 @@ impl Parser {
         loop {
             if let Some(_) = self.consume(sym!("<")) {
                 prev = now;
-                now = self.add()?;
+                now = self.concat()?;
                 let inner_op = SpannedExpr::binary_op("<".into(), prev.clone(), now.clone());
                 ret = SpannedExpr::binary_op("<".into(), ret.clone(), inner_op);
             } else if let Some(_) = self.consume(sym!(">")) {
                 prev = now;
-                now = self.add()?;
+                now = self.concat()?;
                 let inner_op = SpannedExpr::binary_op(">".into(), prev.clone(), now.clone());
                 ret = SpannedExpr::binary_op(">".into(), ret.clone(), inner_op);
             } else if let Some(_) = self.consume(sym!("<=")) {
                 prev = now;
-                now = self.add()?;
+                now = self.concat()?;
                 let inner_op = SpannedExpr::binary_op("<=".into(), prev.clone(), now.clone());
                 ret = SpannedExpr::binary_op("<=".into(), ret.clone(), inner_op);
             } else if let Some(_) = self.consume(sym!(">=")) {
                 prev = now;
-                now = self.add()?;
+                now = self.concat()?;
                 let inner_op = SpannedExpr::binary_op(">=".into(), prev.clone(), now.clone());
                 ret = SpannedExpr::binary_op(">=".into(), ret.clone(), inner_op);
+            } else {
+                return Ok(ret);
+            }
+        }
+    }
+
+    fn concat(&mut self) -> Result<SpannedExpr> {
+        let mut ret = self.add()?;
+        loop {
+            if let Some(_) = self.consume(sym!("++")) {
+                let exp = self.add()?;
+                ret = SpannedExpr::binary_op("++".into(), ret, exp);
             } else {
                 return Ok(ret);
             }
@@ -625,7 +654,7 @@ impl Parser {
                     ttype: TokenType::Type(val),
                     span,
                 }) => match val.as_str() {
-                    "int" | "bool" => Ok(Type::constant(&val)),
+                    "int" | "bool" | "string" => Ok(Type::constant(&val)),
                     _ => Err(ParseError::InvalidType { found: val, span }.into()),
                 },
                 Some(Token {
