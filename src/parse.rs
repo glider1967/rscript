@@ -388,50 +388,42 @@ impl Parser {
     }
 
     fn rel(&mut self) -> Result<SpannedExpr> {
-        let mut ret = self.concat()?;
-        let mut now: SpannedExpr;
-        let mut prev: SpannedExpr;
+        let mut expr = self.concat()?;
 
-        if let Some(_) = self.consume(sym!("<")) {
-            now = self.concat()?;
-            ret = SpannedExpr::binary_op("<".into(), ret, now.clone());
-        } else if let Some(_) = self.consume(sym!(">")) {
-            now = self.concat()?;
-            ret = SpannedExpr::binary_op(">".into(), ret, now.clone());
-        } else if let Some(_) = self.consume(sym!("<=")) {
-            now = self.concat()?;
-            ret = SpannedExpr::binary_op("<=".into(), ret, now.clone());
-        } else if let Some(_) = self.consume(sym!(">=")) {
-            now = self.concat()?;
-            ret = SpannedExpr::binary_op(">=".into(), ret, now.clone());
-        } else {
-            return Ok(ret);
+        let mut prev_value = match self.next_relation_op() {
+            Some(op) => {
+                let value = self.concat()?;
+                expr = SpannedExpr::binary_op(op.into(), expr, value.clone());
+                value
+            }
+            None => return Ok(expr),
+        };
+
+        while let Some(next_op) = self.next_relation_op() {
+            let next_value = self.concat()?;
+
+            let next_comparison =
+                SpannedExpr::binary_op(next_op.into(), prev_value.clone(), next_value.clone());
+
+            // Combine with AND operator
+            expr = SpannedExpr::binary_op("&&".into(), expr, next_comparison);
+            prev_value = next_value;
         }
 
-        loop {
-            if let Some(_) = self.consume(sym!("<")) {
-                prev = now;
-                now = self.concat()?;
-                let inner_op = SpannedExpr::binary_op("<".into(), prev.clone(), now.clone());
-                ret = SpannedExpr::binary_op("<".into(), ret.clone(), inner_op);
-            } else if let Some(_) = self.consume(sym!(">")) {
-                prev = now;
-                now = self.concat()?;
-                let inner_op = SpannedExpr::binary_op(">".into(), prev.clone(), now.clone());
-                ret = SpannedExpr::binary_op(">".into(), ret.clone(), inner_op);
-            } else if let Some(_) = self.consume(sym!("<=")) {
-                prev = now;
-                now = self.concat()?;
-                let inner_op = SpannedExpr::binary_op("<=".into(), prev.clone(), now.clone());
-                ret = SpannedExpr::binary_op("<=".into(), ret.clone(), inner_op);
-            } else if let Some(_) = self.consume(sym!(">=")) {
-                prev = now;
-                now = self.concat()?;
-                let inner_op = SpannedExpr::binary_op(">=".into(), prev.clone(), now.clone());
-                ret = SpannedExpr::binary_op(">=".into(), ret.clone(), inner_op);
-            } else {
-                return Ok(ret);
-            }
+        Ok(expr)
+    }
+
+    fn next_relation_op(&mut self) -> Option<&'static str> {
+        if let Some(_) = self.consume(sym!("<")) {
+            Some("<")
+        } else if let Some(_) = self.consume(sym!(">")) {
+            Some(">")
+        } else if let Some(_) = self.consume(sym!("<=")) {
+            Some("<=")
+        } else if let Some(_) = self.consume(sym!(">=")) {
+            Some(">=")
+        } else {
+            None
         }
     }
 
