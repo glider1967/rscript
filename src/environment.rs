@@ -32,7 +32,7 @@ impl Env {
             if let Some(outer) = &self.outer {
                 outer.borrow().get(name)
             } else {
-                bail!("undefined variable")
+                bail!("undefined variable: {name}")
             }
         }
     }
