@@ -110,17 +110,26 @@ impl<'a> Tokenizer<'a> {
                 let mut signs = ch.to_string();
                 let start_col = self.col;
 
+                // 文字列
                 if ch == '\"' {
                     let mut string = "".to_string();
                     let start_col = self.col;
-                    while let Some(ch) = program.peek() {
-                        if *ch != '\"' {
-                            string.push(*ch);
-                            let _ = program.next();
-                            self.col += 1;
+                    while let Some(ch) = program.next() {
+                        if ch != '\"' {
+                            // Escape
+                            if ch == '\\' {
+                                if let Some(ch2) = program.next() {
+                                    match ch2 {
+                                        'n' => string.push('\n'),
+                                        '\\' => string.push('\\'),
+                                        '\"' => string.push('\"'),
+                                        _ => {}
+                                    }
+                                }
+                            } else {
+                                string.push(ch);
+                            }
                         } else {
-                            let _ = program.next();
-                            self.col += 1;
                             break;
                         }
                     }
