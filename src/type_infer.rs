@@ -107,7 +107,7 @@ impl TypeInfer {
                     Self::unify_str(&t2, &exp2)?;
                     Ok(Type::constant("string"))
                 }
-                "+" | "-" | "*" | "/" => {
+                "+" | "-" | "*" | "/" | "%" => {
                     let t1 = self.infer_type(&exp1)?;
                     let t2 = self.infer_type(&exp2)?;
                     Self::unify_int(&t1, &exp1)?;

@@ -461,6 +461,9 @@ impl Parser {
             } else if let Some(_) = self.consume(sym!("/")) {
                 let exp = self.unary()?;
                 ret = SpannedExpr::binary_op("/".to_owned(), ret, exp);
+            } else if let Some(_) = self.consume(sym!("%")) {
+                let exp = self.unary()?;
+                ret = SpannedExpr::binary_op("%".to_owned(), ret, exp);
             } else {
                 return Ok(ret);
             }

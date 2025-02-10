@@ -51,6 +51,7 @@ impl Eval {
                         "-" => Ok(Value::Int(x - y)),
                         "*" => Ok(Value::Int(x * y)),
                         "/" => Ok(Value::Int(x / y)),
+                        "%" => Ok(Value::Int(x % y)),
                         "==" => Ok(Value::Bool(x == y)),
                         "!=" => Ok(Value::Bool(x != y)),
                         "<" => Ok(Value::Bool(x < y)),
