@@ -38,18 +38,8 @@ impl TypeEnv {
     pub fn set(&mut self, name: String, val: Type) {
         self.env.insert(name, val);
     }
-}
 
-impl core::fmt::Display for TypeEnv {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            self.env
-                .iter()
-                .map(|(k, v)| format!("{k}: {v}"))
-                .collect::<Vec<_>>()
-                .join("\n")
-        )
+    pub fn entries(&self) -> std::collections::hash_map::Iter<'_, String, Type> {
+        self.env.iter()
     }
 }

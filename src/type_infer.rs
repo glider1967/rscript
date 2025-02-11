@@ -218,7 +218,7 @@ impl TypeInfer {
 
     // 単一化 - ”型のつじつま合わせ”
     fn unify(t1: &Type, t2: &Type) -> Result<()> {
-        match (Self::zonk(t1), Self::zonk(t2)) {
+        match (t1.zonk(), t2.zonk()) {
             (Type::Constant(c1), Type::Constant(c2)) if c1 == c2 => Ok(()),
             (Type::Func(arg1, ret1), Type::Func(arg2, ret2)) => {
                 Self::unify(&arg1, &arg2)?;
@@ -286,7 +286,7 @@ impl TypeInfer {
 
     // 型変数の出現チェック
     fn occur(n: &u64, t: &Type) -> bool {
-        match Self::zonk(t) {
+        match t.zonk() {
             Type::Constant(_) => false,
             Type::Func(arg, ret) => Self::occur(n, &arg) || Self::occur(n, &ret),
             Type::TypeVar(m, t1) => {
@@ -303,22 +303,9 @@ impl TypeInfer {
         }
     }
 
-    // zonking - 確定した型変数を引きはがす
-    fn zonk(t: &Type) -> Type {
-        match t {
-            Type::Constant(s) => Type::Constant(s.clone()),
-            Type::Func(arg, ret) => Type::func(Self::zonk(arg), Self::zonk(ret)),
-            Type::TypeVar(_, t1) => match *(*t1).borrow() {
-                Some(ref t1) => Self::zonk(t1),
-                None => t.clone(),
-            },
-            Type::Quantifier(id) => Type::Quantifier(*id),
-        }
-    }
-
     // 一般化 - 推論されなかった型変数を量化
     fn generalize(&self, t: &Type) {
-        match Self::zonk(t) {
+        match t.zonk() {
             Type::Constant(_) => (),
             Type::Func(arg, ret) => {
                 self.generalize(&*arg);
@@ -331,7 +318,7 @@ impl TypeInfer {
 
     // インスタンス化 - 量化された型変数を再び普通の型変数に
     fn instantiate(&mut self, t: &Type) -> Type {
-        let ty = Self::zonk(t);
+        let ty = t.zonk();
         self.inst_inner(ty, &mut HashMap::new())
     }
 
@@ -354,6 +341,18 @@ impl TypeInfer {
 
 impl core::fmt::Display for TypeInfer {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.env.borrow())
+        write!(
+            f,
+            "{}",
+            self.env
+                .borrow()
+                .entries()
+                .map(|(k, v)| {
+                    self.generalize(v);
+                    format!("{}: {}", k, v.zonk())
+                })
+                .collect::<Vec<_>>()
+                .join("\n")
+        )
     }
 }

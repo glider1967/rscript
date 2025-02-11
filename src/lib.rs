@@ -19,7 +19,7 @@ mod types;
 #[derive(Tsify, Serialize)]
 #[tsify(into_wasm_abi)]
 pub enum EvaluationResult {
-    Ok(String),
+    Ok { evaluated: String, types: String },
     ParseError(String),
     TypeInferError(String),
     EvaluationError(String),
@@ -28,13 +28,19 @@ pub enum EvaluationResult {
 #[wasm_bindgen]
 pub fn eval_script(line: &str) -> EvaluationResult {
     match Parser::new(line).prog() {
-        Ok(stmt) => match TypeInfer::new().infer_type(&stmt) {
-            Ok(_) => match Eval::new().eval(&stmt) {
-                Ok(val) => EvaluationResult::Ok(val.to_string()),
-                Err(err) => EvaluationResult::EvaluationError(err.to_string()),
-            },
-            Err(err) => EvaluationResult::TypeInferError(err.to_string()),
-        },
+        Ok(stmt) => {
+            let mut tyinf = TypeInfer::new();
+            match tyinf.infer_type(&stmt) {
+                Ok(_) => match Eval::new().eval(&stmt) {
+                    Ok(val) => EvaluationResult::Ok {
+                        evaluated: val.to_string(),
+                        types: tyinf.to_string(),
+                    },
+                    Err(err) => EvaluationResult::EvaluationError(err.to_string()),
+                },
+                Err(err) => EvaluationResult::TypeInferError(err.to_string()),
+            }
+        }
         Err(err) => EvaluationResult::ParseError(err.to_string()),
     }
 }

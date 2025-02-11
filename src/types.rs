@@ -32,11 +32,24 @@ impl Type {
         }
         (args, ret.clone())
     }
+
+    // zonking - 確定した型変数を引きはがす
+    pub fn zonk(&self) -> Type {
+        match self {
+            Type::Constant(s) => Type::Constant(s.clone()),
+            Type::Func(arg, ret) => Type::func(Self::zonk(arg), Self::zonk(ret)),
+            Type::TypeVar(_, t1) => match *(*t1).borrow() {
+                Some(ref t1) => Self::zonk(t1),
+                None => self.clone(),
+            },
+            Type::Quantifier(id) => Type::Quantifier(*id),
+        }
+    }
 }
 
 impl fmt::Display for Type {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
+        match self.zonk() {
             Type::Constant(s) => write!(f, "{s}"),
             Type::Func(t1, t2) => write!(f, "({t1} -> {t2})"),
             Type::TypeVar(id, _) => write!(f, "t{id}"),
