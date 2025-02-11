@@ -11,6 +11,7 @@ mod internal_value;
 mod parse;
 mod span;
 mod tokenize;
+mod type_env;
 mod type_infer;
 mod types;
 
@@ -20,20 +21,17 @@ fn main() -> Result<()> {
         let fizzbuzz = lambda(n: int) {
             if (n == 0) {
                 ""
+            } else if (24 <= n < 30) { // oooooo
+                fizzbuzz(n - 1) ++ "YAYYYYYY\n"
+            } else if (n % 15 == 0) { 
+                fizzbuzz(n - 1) ++ "FizzBuzz\n" // lafksj
+                // lkj
+            } else if (n % 5 == 0) {
+                fizzbuzz(n - 1) ++ "Buzz\n"
+            } else if (n % 3 == 0) {
+                fizzbuzz(n - 1) ++ "Fizz\n"
             } else {
-                if (n % 15 == 0) {
-                    fizzbuzz(n - 1) ++ "FizzBuzz\n"
-                } else {
-                    if (n % 5 == 0) {
-                        fizzbuzz(n - 1) ++ "Buzz\n"
-                    } else {
-                        if (n % 3 == 0) {
-                            fizzbuzz(n - 1) ++ "Fizz\n"
-                        } else {
-                            fizzbuzz(n - 1) ++ ~n ++ "\n"
-                        }
-                    }
-                }
+                fizzbuzz(n - 1) ++ ~n ++ "\n"
             }
         };
         fizzbuzz(30)
@@ -44,10 +42,10 @@ fn main() -> Result<()> {
     let string = &stmt.to_string();
     println!("{}", string);
 
-    let inferred = TypeInfer::new()
-        .infer_type(&stmt)
-        .context("Type Inferrence Error")?;
+    let mut tyinf = TypeInfer::new();
+    let inferred = tyinf.infer_type(&stmt).context("Type Inferrence Error")?;
     println!("inffered: {}", inferred);
+    println!("type environment:\n {}", tyinf);
 
     let evaluated = Eval::new().eval(&stmt).context("Evaluation Error")?;
     println!("{}", evaluated.to_string());

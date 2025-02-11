@@ -12,6 +12,7 @@ mod internal_value;
 mod parse;
 mod span;
 mod tokenize;
+mod type_env;
 mod type_infer;
 mod types;
 

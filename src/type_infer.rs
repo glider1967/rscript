@@ -6,6 +6,7 @@ use thiserror::Error;
 use crate::{
     expression::{ConstructorDef, Expr, Pattern, SpannedExpr},
     span::Span,
+    type_env::TypeEnv,
     types::Type,
 };
 
@@ -19,41 +20,6 @@ pub enum TypeInferError {
     },
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct TypeEnv {
-    env: HashMap<String, Type>,
-    outer: Option<Rc<RefCell<TypeEnv>>>,
-}
-
-impl TypeEnv {
-    fn new() -> Self {
-        Self {
-            env: HashMap::new(),
-            outer: None,
-        }
-    }
-
-    fn with_outer(outer: Rc<RefCell<TypeEnv>>) -> Self {
-        Self {
-            env: HashMap::new(),
-            outer: Some(outer),
-        }
-    }
-
-    fn get(&self, name: &str) -> Result<Type> {
-        if let Some(val) = self.env.get(name) {
-            Ok(val.clone())
-        } else if let Some(outer) = &self.outer {
-            outer.borrow().get(name)
-        } else {
-            bail!("type: undefined variable {name}");
-        }
-    }
-
-    fn set(&mut self, name: String, val: Type) {
-        self.env.insert(name, val);
-    }
-}
 pub struct TypeInfer {
     env: Rc<RefCell<TypeEnv>>,
     next_typevar_id: u64,
@@ -383,5 +349,11 @@ impl TypeInfer {
             Type::Func(t1, t2) => Type::func(self.inst_inner(*t1, map), self.inst_inner(*t2, map)),
             Type::TypeVar(_, _) => ty,
         }
+    }
+}
+
+impl core::fmt::Display for TypeInfer {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.env.borrow())
     }
 }
