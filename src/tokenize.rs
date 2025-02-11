@@ -122,6 +122,18 @@ impl<'a> Tokenizer<'a> {
                     continue;
                 }
 
+                // コメント
+                if ch == '/' {
+                    if let Some('/') = program.peek() {
+                        while let Some(ch) = program.next() {
+                            if ch == '\n' {
+                                break;
+                            }
+                        }
+                        continue;
+                    }
+                }
+
                 // カッコ
                 if parens.contains(ch) {
                     ret.push(Token::new(
