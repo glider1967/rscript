@@ -245,7 +245,7 @@ impl TypeInfer {
             TypeInferError::UnificationError {
                 ty1: ty.to_string(),
                 ty2: "int".to_string(),
-                span: expr.span.clone(),
+                span: expr.span,
             }
             .into()
         })
@@ -256,7 +256,7 @@ impl TypeInfer {
             TypeInferError::UnificationError {
                 ty1: ty.to_string(),
                 ty2: "bool".to_string(),
-                span: expr.span.clone(),
+                span: expr.span,
             }
             .into()
         })
@@ -267,7 +267,7 @@ impl TypeInfer {
             TypeInferError::UnificationError {
                 ty1: ty.to_string(),
                 ty2: "string".to_string(),
-                span: expr.span.clone(),
+                span: expr.span,
             }
             .into()
         })
@@ -278,7 +278,7 @@ impl TypeInfer {
             TypeInferError::UnificationError {
                 ty1: ty1.to_string(),
                 ty2: ty2.to_string(),
-                span: expr.span.clone(),
+                span: expr.span,
             }
             .into()
         })

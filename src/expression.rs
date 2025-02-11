@@ -65,7 +65,7 @@ impl SpannedExpr {
     }
 
     pub fn unary_op(op: String, expr: SpannedExpr, span: Span) -> Self {
-        let expr_span = expr.span.clone();
+        let expr_span = expr.span;
         SpannedExpr::new(
             Expr::UnaryOp(op, Box::new(expr)),
             Span::compose(&span, &expr_span),

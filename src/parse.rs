@@ -71,13 +71,10 @@ impl Parser {
             span,
         }) = self.tokens.last()
         {
-            let span = span.clone();
+            let span = *span;
             let val = *val;
             self.tokens.pop();
-            Some(TokenInfo {
-                value: val,
-                span: span,
-            })
+            Some(TokenInfo { value: val, span })
         } else {
             None
         }
@@ -91,13 +88,10 @@ impl Parser {
         {
             let is_bool = val == "true" || val == "false";
             if is_bool {
-                let span = span.clone();
+                let span = *span;
                 let val = val == "true";
                 self.tokens.pop();
-                Some(TokenInfo {
-                    value: val,
-                    span: span,
-                })
+                Some(TokenInfo { value: val, span })
             } else {
                 None
             }
@@ -112,7 +106,7 @@ impl Parser {
             span,
         }) = self.tokens.last()
         {
-            let span = span.clone();
+            let span = *span;
             let val = val.clone();
             self.tokens.pop();
             Some(TokenInfo { value: val, span })
@@ -127,13 +121,10 @@ impl Parser {
             span,
         }) = self.tokens.last()
         {
-            let span = span.clone();
+            let span = *span;
             let val = val.clone();
             self.tokens.pop();
-            Some(TokenInfo {
-                value: val,
-                span: span,
-            })
+            Some(TokenInfo { value: val, span })
         } else {
             None
         }
@@ -223,7 +214,7 @@ impl Parser {
 
             let mut ret = prog;
             for (ident, ty) in idents.into_iter().rev() {
-                let ret_span = ret.span.clone();
+                let ret_span = ret.span;
                 ret = SpannedExpr::lambda(ident, ty, ret, ret_span);
             }
 
@@ -286,7 +277,7 @@ impl Parser {
 
         if let Some(if_span) = self.consume(kwd!("if")) {
             let else_if_expr = self.if_expr(&if_span)?;
-            let end_span = else_if_expr.span.clone();
+            let end_span = else_if_expr.span;
             Ok(SpannedExpr::if_expr(
                 cond,
                 then_expr,
@@ -532,7 +523,7 @@ impl Parser {
 
         let ret = self.expr()?;
         let ret_span = if prog.is_empty() {
-            ret.span.clone()
+            ret.span
         } else {
             Span::compose(&prog[0].span, &ret.span)
         };

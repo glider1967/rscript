@@ -4,7 +4,7 @@ struct Position {
     col: u32,
 }
 
-#[derive(PartialEq, Eq, Debug, Clone)]
+#[derive(PartialEq, Eq, Debug, Clone, Copy)]
 pub struct Span {
     start: Position,
     end: Position,
