@@ -10,33 +10,27 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum ParseError {
-    #[error("at {span:?}: Unexpected token: expected {expected:?}, found {found:?}")]
+    #[error("at {span}: Unexpected token: expected {expected:?}, found {found:?}")]
     UnexpectedToken {
         expected: TokenType,
-        found: Option<TokenType>,
-        span: Option<Span>,
+        found: TokenType,
+        span: Span,
     },
 
-    #[error("at {span:?}: Expected primary token, found {found:?}")]
-    ExpectedPrimaryToken {
-        found: Option<TokenType>,
-        span: Option<Span>,
-    },
+    #[error("at {span}: Expected primary token, found {found:?}")]
+    ExpectedPrimaryToken { found: TokenType, span: Span },
 
-    #[error("at {span:?}: Expected identifier, found {found:?}")]
-    ExpectedIdentifier {
-        found: Option<TokenType>,
-        span: Option<Span>,
-    },
+    #[error("at {span}: Expected identifier, found {found:?}")]
+    ExpectedIdentifier { found: TokenType, span: Span },
 
-    #[error("at {span:?} Invalid type: {found}")]
+    #[error("at {span} Invalid type: {found}")]
     InvalidType { found: String, span: Span },
 
-    #[error("at {span:?} Expected type declaration, found {found:?}")]
-    ExpectedType {
-        found: Option<TokenType>,
-        span: Option<Span>,
-    },
+    #[error("at {span} Expected type declaration, found {found:?}")]
+    ExpectedType { found: TokenType, span: Span },
+
+    #[error("Expected some token, but found EOF")]
+    UnexpectedEOF,
 }
 #[derive(Debug)]
 struct TokenInfo<T> {
@@ -150,20 +144,15 @@ impl Parser {
             if t.ttype != expected {
                 Err(ParseError::UnexpectedToken {
                     expected,
-                    found: Some(t.ttype),
-                    span: Some(t.span),
+                    found: t.ttype,
+                    span: t.span,
                 }
                 .into())
             } else {
                 Ok(t)
             }
         } else {
-            Err(ParseError::UnexpectedToken {
-                expected,
-                found: None,
-                span: None,
-            }
-            .into())
+            Err(ParseError::UnexpectedEOF.into())
         }
     }
 
@@ -185,17 +174,13 @@ impl Parser {
             match token.ttype {
                 TokenType::Ident(val) => Ok(val),
                 other => Err(ParseError::ExpectedIdentifier {
-                    found: Some(other),
-                    span: Some(token.span),
+                    found: other,
+                    span: token.span,
                 }
                 .into()),
             }
         } else {
-            Err(ParseError::ExpectedIdentifier {
-                found: None,
-                span: None,
-            }
-            .into())
+            Err(ParseError::UnexpectedEOF.into())
         }
     }
 
@@ -280,16 +265,12 @@ impl Parser {
         } else {
             if let Some(tok) = self.tokens.pop() {
                 Err(ParseError::ExpectedPrimaryToken {
-                    found: Some(tok.ttype),
-                    span: Some(tok.span),
+                    found: tok.ttype,
+                    span: tok.span,
                 }
                 .into())
             } else {
-                Err(ParseError::ExpectedPrimaryToken {
-                    found: None,
-                    span: None,
-                }
-                .into())
+                Err(ParseError::UnexpectedEOF.into())
             }
         }
     }
@@ -671,15 +652,11 @@ impl Parser {
                 }) => Ok(Type::constant(&val)),
 
                 Some(Token { ttype, span }) => Err(ParseError::ExpectedType {
-                    found: Some(ttype),
-                    span: Some(span),
+                    found: ttype,
+                    span: span,
                 }
                 .into()),
-                None => Err(ParseError::ExpectedType {
-                    found: None,
-                    span: None,
-                }
-                .into()),
+                None => Err(ParseError::UnexpectedEOF.into()),
             }
         }
     }
