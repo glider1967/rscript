@@ -125,7 +125,7 @@ impl<'a> Tokenizer<'a> {
                 // コメント
                 if ch == '/' {
                     if let Some('/') = program.peek() {
-                        while let Some(ch) = program.next() {
+                        for ch in program.by_ref() {
                             if ch == '\n' {
                                 break;
                             }

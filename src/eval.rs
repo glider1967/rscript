@@ -34,13 +34,13 @@ impl Eval {
             Expr::Variable(name) => self.env.borrow().get(name),
             Expr::Program(prog, ret) => {
                 for expr in prog {
-                    self.eval(&expr)?;
+                    self.eval(expr)?;
                 }
-                self.eval(&ret)
+                self.eval(ret)
             }
             Expr::BinOp(op, exp1, exp2) => {
-                let v1 = self.eval(&exp1)?;
-                let v2 = self.eval(&exp2)?;
+                let v1 = self.eval(exp1)?;
+                let v2 = self.eval(exp2)?;
                 match (v1, v2) {
                     (Value::Str(x), Value::Str(y)) => match op.as_str() {
                         "++" => Ok(Value::Str(x + &y)),
@@ -71,7 +71,7 @@ impl Eval {
                 }
             }
             Expr::UnaryOp(op, exp1) => {
-                let v1 = self.eval(&exp1)?;
+                let v1 = self.eval(exp1)?;
                 match v1 {
                     Value::Int(x) => match op.as_str() {
                         "-" => Ok(Value::Int(-x)),
@@ -88,23 +88,23 @@ impl Eval {
                 }
             }
             Expr::If(cond, exp1, exp2) => {
-                if let Value::Bool(b) = self.eval(&cond)? {
+                if let Value::Bool(b) = self.eval(cond)? {
                     if b {
-                        self.eval(&exp1)
+                        self.eval(exp1)
                     } else {
-                        self.eval(&exp2)
+                        self.eval(exp2)
                     }
                 } else {
                     bail!("if expression: non-bool condition!");
                 }
             }
             Expr::Assign(name, _, expr) => {
-                let val = self.eval(&expr)?;
+                let val = self.eval(expr)?;
                 self.env.borrow_mut().set_new(name, val.clone())?;
                 Ok(val)
             }
             Expr::Reassign(name, expr) => {
-                let val = self.eval(&expr)?;
+                let val = self.eval(expr)?;
                 self.env.borrow_mut().set_dup(name, val.clone())?;
                 Ok(val)
             }
@@ -117,11 +117,11 @@ impl Eval {
                 Ok(Value::Unit)
             }
             Expr::Match(expr, arms) => {
-                let val = self.eval(&expr)?;
+                let val = self.eval(expr)?;
                 for (pattern, arm) in arms {
                     let new_env = Env::with_outer(Rc::clone(&self.env));
                     let inner_eval = Eval::with_env(new_env);
-                    if inner_eval.match_pattern(&val, &pattern)? {
+                    if inner_eval.match_pattern(&val, pattern)? {
                         return inner_eval.eval(arm);
                     }
                 }
@@ -132,14 +132,11 @@ impl Eval {
                 Ok(Value::Lambda(var.clone(), expr.clone(), new_env))
             }
             Expr::App(fun, var) => {
-                if let Value::Lambda(arg, expr, env) = self.eval(&fun)? {
+                if let Value::Lambda(arg, expr, env) = self.eval(fun)? {
                     let inner_eval = Eval::with_env(env);
-                    inner_eval
-                        .env
-                        .borrow_mut()
-                        .set_new(&arg, self.eval(&var)?)?;
+                    inner_eval.env.borrow_mut().set_new(&arg, self.eval(var)?)?;
                     inner_eval.eval(&expr)
-                } else if let Value::Constructor(name, vals) = self.eval(&fun)? {
+                } else if let Value::Constructor(name, vals) = self.eval(fun)? {
                     let mut vals = vals;
                     vals.push(self.eval(var)?);
                     Ok(Value::Constructor(name, vals))
@@ -158,10 +155,8 @@ impl Eval {
             if pattern.vars.len() != args.len() {
                 bail!("number of args does't match");
             }
-            for i in 0..args.len() {
-                self.env
-                    .borrow_mut()
-                    .set_new(&pattern.vars[i], args[i].clone())?;
+            for (arg, var) in args.iter().zip(pattern.vars.iter()) {
+                self.env.borrow_mut().set_new(var, arg.clone())?;
             }
             Ok(true)
         } else {

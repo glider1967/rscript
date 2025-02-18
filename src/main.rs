@@ -18,23 +18,24 @@ mod types;
 fn main() -> Result<()> {
     let stmt = Parser::new(
         r#"
-        let fizzbuzz = lambda(n: int) {
-            if (n == 0) {
-                ""
-            } else if (24 <= n < 30) { // oooooo
-                fizzbuzz(n - 1) ++ "YAYYYYYY\n"
-            } else if (n % 15 == 0) { 
-                fizzbuzz(n - 1) ++ "FizzBuzz\n" // lafksj
-                // lkj
-            } else if (n % 5 == 0) {
-                fizzbuzz(n - 1) ++ "Buzz\n"
-            } else if (n % 3 == 0) {
-                fizzbuzz(n - 1) ++ "Fizz\n"
-            } else {
-                fizzbuzz(n - 1) ++ ~n ++ "\n"
-            }
-        };
-        fizzbuzz(30)
+enum List {
+    Cons(int, List),
+    Nil
+};
+let sum = lambda(l: List) {
+    match (l) {
+        Cons(x, xs) => x + sum(xs),
+        Nil => 0
+    }
+};
+let map = lambda(l: List, f: int -> int) {
+    match(l) {
+        Cons(x, xs) => Cons(f(x), map(xs, f)),
+        Nil => Nil
+    }
+};
+let l = Cons(1, Cons(2, Cons(3, Nil)));
+sum(map(l, lambda(x){x*x})) // 1*1 + 2*2 + 3*3
         "#,
     )
     .prog()
@@ -48,6 +49,6 @@ fn main() -> Result<()> {
     println!("type environment:\n {}", tyinf);
 
     let evaluated = Eval::new().eval(&stmt).context("Evaluation Error")?;
-    println!("{}", evaluated.to_string());
+    println!("{}", evaluated);
     Ok(())
 }

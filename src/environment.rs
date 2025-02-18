@@ -28,12 +28,10 @@ impl Env {
     pub fn get(&self, name: &str) -> Result<Value> {
         if let Some(val) = self.env.get(name) {
             Ok(val.clone())
+        } else if let Some(outer) = &self.outer {
+            outer.borrow().get(name)
         } else {
-            if let Some(outer) = &self.outer {
-                outer.borrow().get(name)
-            } else {
-                bail!("undefined variable: {name}")
-            }
+            bail!("undefined variable: {name}")
         }
     }
 

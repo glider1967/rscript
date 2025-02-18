@@ -2,6 +2,7 @@ use core::fmt;
 use std::{cell::RefCell, rc::Rc};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[allow(clippy::enum_variant_names)]
 pub enum Type {
     Constant(String),
     Func(Box<Type>, Box<Type>),
@@ -21,14 +22,9 @@ impl Type {
     pub fn to_args_and_ret(&self) -> (Vec<Type>, Type) {
         let mut args = vec![];
         let mut ret = self;
-        loop {
-            match ret {
-                Self::Func(arg, r) => {
-                    args.push(*arg.clone());
-                    ret = r
-                }
-                _ => break,
-            }
+        while let Self::Func(arg, r) = ret {
+            args.push(*arg.clone());
+            ret = r
         }
         (args, ret.clone())
     }

@@ -181,16 +181,16 @@ impl Parser {
 
     fn ident_and_opt_types(&mut self) -> Result<Vec<(String, Option<Type>)>> {
         let ident = self.expect_ident()?;
-        let ty = if let Some(_) = self.consume(sym!(":")) {
+        let ty = if self.consume(sym!(":")).is_some() {
             Some(self.parse_ty()?)
         } else {
             None
         };
         let mut list = vec![(ident, ty)];
         loop {
-            if let Some(_) = self.consume(sym!(",")) {
+            if self.consume(sym!(",")).is_some() {
                 let ident = self.expect_ident()?;
-                let ty = if let Some(_) = self.consume(sym!(":")) {
+                let ty = if self.consume(sym!(":")).is_some() {
                     Some(self.parse_ty()?)
                 } else {
                     None
@@ -253,16 +253,14 @@ impl Parser {
             Ok(SpannedExpr::string(token.value, token.span))
         } else if let Some(token) = self.consume_ident() {
             Ok(SpannedExpr::variable(token.value, token.span))
-        } else {
-            if let Some(tok) = self.tokens.pop() {
-                Err(ParseError::ExpectedPrimaryToken {
-                    found: tok.ttype,
-                    span: tok.span,
-                }
-                .into())
-            } else {
-                Err(ParseError::UnexpectedEOF.into())
+        } else if let Some(tok) = self.tokens.pop() {
+            Err(ParseError::ExpectedPrimaryToken {
+                found: tok.ttype,
+                span: tok.span,
             }
+            .into())
+        } else {
+            Err(ParseError::UnexpectedEOF.into())
         }
     }
 
@@ -282,7 +280,7 @@ impl Parser {
                 cond,
                 then_expr,
                 else_if_expr,
-                Span::compose(&start_span, &end_span),
+                Span::compose(start_span, &end_span),
             ))
         } else {
             self.expect(sym!("{"))?;
@@ -292,7 +290,7 @@ impl Parser {
                 cond,
                 then_expr,
                 else_expr,
-                Span::compose(&start_span, &end_token.span),
+                Span::compose(start_span, &end_token.span),
             ))
         }
     }
@@ -300,7 +298,7 @@ impl Parser {
     fn or(&mut self) -> Result<SpannedExpr> {
         let mut ret = self.and()?;
         loop {
-            if let Some(_) = self.consume(sym!("||")) {
+            if self.consume(sym!("||")).is_some() {
                 let exp = self.and()?;
                 ret = SpannedExpr::binary_op("||".into(), ret, exp);
             } else {
@@ -312,7 +310,7 @@ impl Parser {
     fn and(&mut self) -> Result<SpannedExpr> {
         let mut ret = self.equ()?;
         loop {
-            if let Some(_) = self.consume(sym!("&&")) {
+            if self.consume(sym!("&&")).is_some() {
                 let exp = self.equ()?;
                 ret = SpannedExpr::binary_op("&&".into(), ret, exp);
             } else {
@@ -326,10 +324,10 @@ impl Parser {
         let mut now;
         let mut prev;
 
-        if let Some(_) = self.consume(sym!("==")) {
+        if self.consume(sym!("==")).is_some() {
             now = self.rel()?.clone();
             ret = SpannedExpr::binary_op("==".to_owned(), ret, now.clone());
-        } else if let Some(_) = self.consume(sym!("!=".to_owned())) {
+        } else if self.consume(sym!("!=".to_owned())).is_some() {
             now = self.rel()?.clone();
             ret = SpannedExpr::binary_op("!=".into(), ret, now.clone());
         } else {
@@ -337,7 +335,7 @@ impl Parser {
         }
 
         loop {
-            if let Some(_) = self.consume(sym!("==")) {
+            if self.consume(sym!("==")).is_some() {
                 prev = now;
                 now = self.rel()?.clone();
                 ret = SpannedExpr::binary_op(
@@ -345,7 +343,7 @@ impl Parser {
                     ret,
                     SpannedExpr::binary_op("==".into(), prev.clone(), now.clone()),
                 );
-            } else if let Some(_) = self.consume(sym!("!=")) {
+            } else if self.consume(sym!("!=")).is_some() {
                 prev = now;
                 now = self.rel()?.clone();
                 ret = SpannedExpr::binary_op(
@@ -386,13 +384,13 @@ impl Parser {
     }
 
     fn next_relation_op(&mut self) -> Option<&'static str> {
-        if let Some(_) = self.consume(sym!("<")) {
+        if self.consume(sym!("<")).is_some() {
             Some("<")
-        } else if let Some(_) = self.consume(sym!(">")) {
+        } else if self.consume(sym!(">")).is_some() {
             Some(">")
-        } else if let Some(_) = self.consume(sym!("<=")) {
+        } else if self.consume(sym!("<=")).is_some() {
             Some("<=")
-        } else if let Some(_) = self.consume(sym!(">=")) {
+        } else if self.consume(sym!(">=")).is_some() {
             Some(">=")
         } else {
             None
@@ -402,7 +400,7 @@ impl Parser {
     fn concat(&mut self) -> Result<SpannedExpr> {
         let mut ret = self.add()?;
         loop {
-            if let Some(_) = self.consume(sym!("++")) {
+            if self.consume(sym!("++")).is_some() {
                 let exp = self.add()?;
                 ret = SpannedExpr::binary_op("++".into(), ret, exp);
             } else {
@@ -414,10 +412,10 @@ impl Parser {
     fn add(&mut self) -> Result<SpannedExpr> {
         let mut ret = self.mul()?;
         loop {
-            if let Some(_) = self.consume(sym!("+")) {
+            if self.consume(sym!("+")).is_some() {
                 let exp = self.mul()?;
                 ret = SpannedExpr::binary_op("+".to_owned(), ret, exp);
-            } else if let Some(_) = self.consume(sym!("-")) {
+            } else if self.consume(sym!("-")).is_some() {
                 let exp = self.mul()?;
                 ret = SpannedExpr::binary_op("-".to_owned(), ret, exp);
             } else {
@@ -429,13 +427,13 @@ impl Parser {
     fn mul(&mut self) -> Result<SpannedExpr> {
         let mut ret = self.unary()?;
         loop {
-            if let Some(_) = self.consume(sym!("*")) {
+            if self.consume(sym!("*")).is_some() {
                 let exp = self.unary()?;
                 ret = SpannedExpr::binary_op("*".to_owned(), ret, exp);
-            } else if let Some(_) = self.consume(sym!("/")) {
+            } else if self.consume(sym!("/")).is_some() {
                 let exp = self.unary()?;
                 ret = SpannedExpr::binary_op("/".to_owned(), ret, exp);
-            } else if let Some(_) = self.consume(sym!("%")) {
+            } else if self.consume(sym!("%")).is_some() {
                 let exp = self.unary()?;
                 ret = SpannedExpr::binary_op("%".to_owned(), ret, exp);
             } else {
@@ -458,12 +456,12 @@ impl Parser {
 
     fn app(&mut self) -> Result<SpannedExpr> {
         let mut ret = self.primary()?;
-        if let Some(_) = self.consume(sym!("(")) {
+        if self.consume(sym!("(")).is_some() {
             let var = self.expr()?;
             let span = Span::compose(&ret.span, &var.span);
             ret = SpannedExpr::app(ret, var, span);
             loop {
-                if let Some(_) = self.consume(sym!(",")) {
+                if self.consume(sym!(",")).is_some() {
                     let var = self.expr()?;
                     let span = Span::compose(&ret.span, &var.span);
                     ret = SpannedExpr::app(ret, var, span);
@@ -481,7 +479,7 @@ impl Parser {
         loop {
             if let Some(start_span) = self.consume(kwd!("let")) {
                 let ident = self.expect_ident()?;
-                let ty = if let Some(_) = self.consume(sym!(":")) {
+                let ty = if self.consume(sym!(":")).is_some() {
                     Some(self.parse_ty()?)
                 } else {
                     None
@@ -534,7 +532,7 @@ impl Parser {
         let def = self.constructor_def()?;
         let mut defs = vec![def];
         loop {
-            if let Some(_) = self.consume(sym!(",")) {
+            if self.consume(sym!(",")).is_some() {
                 let def = self.constructor_def()?;
                 defs.push(def);
             } else {
@@ -547,11 +545,11 @@ impl Parser {
     fn constructor_def(&mut self) -> Result<ConstructorDef> {
         let name = self.expect_ident()?;
         let mut args = vec![];
-        if let Some(_) = self.consume(sym!("(")) {
+        if self.consume(sym!("(")).is_some() {
             let arg = self.parse_ty()?;
             args.push(arg);
             loop {
-                if let Some(_) = self.consume(sym!(",")) {
+                if self.consume(sym!(",")).is_some() {
                     let arg = self.parse_ty()?;
                     args.push(arg);
                 } else {
@@ -567,7 +565,7 @@ impl Parser {
         let def = self.arm()?;
         let mut defs = vec![def];
         loop {
-            if let Some(_) = self.consume(sym!(",")) {
+            if self.consume(sym!(",")).is_some() {
                 let def = self.arm()?;
                 defs.push(def);
             } else {
@@ -580,11 +578,11 @@ impl Parser {
     fn arm(&mut self) -> Result<(Pattern, SpannedExpr)> {
         let name = self.expect_ident()?;
         let mut vars = vec![];
-        if let Some(_) = self.consume(sym!("(")) {
+        if self.consume(sym!("(")).is_some() {
             let arg = self.expect_ident()?;
             vars.push(arg);
             loop {
-                if let Some(_) = self.consume(sym!(",")) {
+                if self.consume(sym!(",")).is_some() {
                     let arg = self.expect_ident()?;
                     vars.push(arg);
                 } else {
@@ -608,7 +606,7 @@ impl Parser {
     fn fntype(&mut self) -> Result<Type> {
         let mut list = vec![self.primary_type()?];
         loop {
-            if let Some(_) = self.consume(sym!("->")) {
+            if self.consume(sym!("->")).is_some() {
                 let ty = self.primary_type()?;
                 list.push(ty);
             } else {
@@ -624,7 +622,7 @@ impl Parser {
     }
 
     fn primary_type(&mut self) -> Result<Type> {
-        if let Some(_) = self.consume(sym!("(")) {
+        if self.consume(sym!("(")).is_some() {
             let ty = self.parse_ty()?;
             self.expect(sym!(")"))?;
             Ok(ty)
@@ -644,7 +642,7 @@ impl Parser {
 
                 Some(Token { ttype, span }) => Err(ParseError::ExpectedType {
                     found: ttype,
-                    span: span,
+                    span,
                 }
                 .into()),
                 None => Err(ParseError::UnexpectedEOF.into()),

@@ -44,19 +44,19 @@ impl SpannedExpr {
     }
 
     pub fn int(num: i64, span: Span) -> Self {
-        SpannedExpr::new(Expr::Int(num), Span::from(span))
+        SpannedExpr::new(Expr::Int(num), span)
     }
 
     pub fn boolean(b: bool, span: Span) -> Self {
-        SpannedExpr::new(Expr::Bool(b), Span::from(span))
+        SpannedExpr::new(Expr::Bool(b), span)
     }
 
     pub fn string(s: String, span: Span) -> Self {
-        SpannedExpr::new(Expr::Str(s), Span::from(span))
+        SpannedExpr::new(Expr::Str(s), span)
     }
 
     pub fn variable(name: String, span: Span) -> Self {
-        SpannedExpr::new(Expr::Variable(name), Span::from(span))
+        SpannedExpr::new(Expr::Variable(name), span)
     }
 
     pub fn binary_op(op: String, left: SpannedExpr, right: SpannedExpr) -> Self {
@@ -122,7 +122,7 @@ impl fmt::Display for Expr {
                     .map(|x| x.to_string())
                     .collect::<Vec<_>>()
                     .join(" "),
-                ret.to_string()
+                ret
             ),
             Expr::BinOp(op, exp1, exp2) => write!(f, "({exp1} {op} {exp2})"),
             Expr::UnaryOp(op, expr) => write!(f, "{op}({expr})"),
